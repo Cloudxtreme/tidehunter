@@ -1,0 +1,10 @@
+some common code style:
+- postfix:
+    - *_t: is type
+    - *_a: is ngx_array_t
+    - *_s: is ngx_str_t
+
+-prefix:
+    - i_*: is input param
+    - o_*: is output param
+    - io_*: is in&out param
