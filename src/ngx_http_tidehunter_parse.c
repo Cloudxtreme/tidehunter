@@ -47,7 +47,7 @@ static int split_by_eq(ngx_str_t *i_qstr_s, int start, int end, qstr_dict_t *o_d
     if(start > end){
         return -1;
     }
-    int eq_pos;                 /* is it unsafe to use a int as offset instead of unsigned int? */
+    int eq_pos;                 /* FIXME: is it unsafe to use a int as offset instead of unsigned int? */
     for(eq_pos=start;
         eq_pos <= end && i_qstr_s->data[eq_pos] != '=';
         eq_pos++);              /* find the `=' position */
