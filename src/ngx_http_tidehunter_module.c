@@ -74,7 +74,7 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
         23,
         ngx_http_tidehunter_filter_qstr,
         {
-            MO_EXACT_MATCH,
+            MO_EXACT_MATCH_IGNORE_CASE,
             ngx_string("hello"),
             ngx_null_string
         }
@@ -93,23 +93,24 @@ static void* ngx_http_tidehunter_create_loc_conf(ngx_conf_t *cf){
 static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_http_tidehunter_main_conf_t *mcf = ngx_http_get_module_main_conf(req,ngx_http_tidehunter_module);
     if(mcf == NULL){
-        return NGX_DECLINED;
+        return (NGX_DECLINED);
     }
     if(req->internal == 1){
-        return NGX_DECLINED;
+        return (NGX_DECLINED);
     }
     ngx_array_t *filter_rule_a = mcf->filter_rule_a;
     ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
     ngx_uint_t i;
     int filter_rv;
     for(i=0; i < filter_rule_a->nelts; i++){
-        fprintf(stderr, "msg==%.*s\n", (int)filter_rule[i].msg.len, filter_rule[i].msg.data);
+        // fprintf(stderr, "msg==%.*s\n", (int)filter_rule[i].msg.len, filter_rule[i].msg.data);
         filter_rv = filter_rule[i].filter(req, &filter_rule[i].opt);
         if(filter_rv > 0){
-            fprintf(stderr, "MATCH\n");
+            fprintf(stderr, "MATCH HIT:%d\n", filter_rv);
+            return NGX_HTTP_BAD_REQUEST;
         }
     }
-    return NGX_DECLINED;
+    return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
 }
 
 /*
@@ -127,5 +128,5 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_2(ngx_http_request_t *req){
 */
 
 static char* ngx_http_tidehunter_test(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
-    return NGX_CONF_OK;
+    return (NGX_CONF_OK);
 }

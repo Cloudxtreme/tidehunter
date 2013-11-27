@@ -11,6 +11,7 @@ so to make it possible that filter could be implemented outside.
 */
 
 typedef enum {
+    // MO_* is [M]atch [O]ption
     MO_EXACT_MATCH,
     MO_REG_MATCH,
     MO_EXACT_MATCH_IGNORE_CASE

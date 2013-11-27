@@ -5,10 +5,11 @@
 static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qstr_dict_t *o_dict);
 
 void ngx_http_tidehunter_parse_qstr(ngx_str_t *i_qstr_s, ngx_array_t *o_qstr_dict_a){
-    // parse the query string
-    // @param in:  i_qstr_s: query string `a=1&b=2'
-    // @param out: o_qstr_dict_a: tokenize query string name/value pairs
     /*
+      parse the query string
+      @param in:  i_qstr_s: query string `a=1&b=2'
+      @param out: o_qstr_dict_a: tokenize query string name/value pairs
+
       `ab=123&bc=245'
        i    j
               i    j
@@ -30,13 +31,15 @@ void ngx_http_tidehunter_parse_qstr(ngx_str_t *i_qstr_s, ngx_array_t *o_qstr_dic
 }
 
 static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qstr_dict_t *o_dict){
-    // split query string by `=' symbol.
-    // @params in:  i_qstr_s: query string. `a=1'
-    // @params out: o_dict: {name="a", value="1"}
-    //
-    // note: the o_dict's member, eg. o_dict->name, its data ptr is point to
-    //       the original request uri memory address, so change the uri will affect it.
     /*
+      split query string by `=' symbol.
+      @params in:  i_qstr_s: query string. `a=1'
+      @params out: o_dict: {name="a", value="1"}
+      @return: 0 == success
+
+      note: the o_dict's member, eg. o_dict->name, its data ptr is point to
+            the original request uri memory address, so change the uri will affect it.
+
       `abc=123'
        |  || |
        |  || ^end
@@ -47,7 +50,7 @@ static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qs
     if(start > end){
         return -1;
     }
-    ngx_uint_t eq_pos;          /* FIXME: is it unsafe to use a int as offset instead of unsigned int? */
+    ngx_uint_t eq_pos;          /* FIXED: is it unsafe to use a int as offset instead of unsigned int? */
     for(eq_pos=start;
         eq_pos <= end && i_qstr_s->data[eq_pos] != '=';
         eq_pos++);              /* find the `=' position */
