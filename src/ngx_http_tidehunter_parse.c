@@ -2,7 +2,7 @@
 
 #include "ngx_http_tidehunter_parse.h"
 
-static int split_by_eq(ngx_str_t *i_qstr_s, int start, int end, qstr_dict_t *o_dict);
+static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qstr_dict_t *o_dict);
 
 void ngx_http_tidehunter_parse_qstr(ngx_str_t *i_qstr_s, ngx_array_t *o_qstr_dict_a){
     // parse the query string
@@ -14,9 +14,9 @@ void ngx_http_tidehunter_parse_qstr(ngx_str_t *i_qstr_s, ngx_array_t *o_qstr_dic
               i    j
               ...
     */
-    int i=0, j=0;
+    ngx_uint_t i=0, j=0;
     qstr_dict_t *dict;
-    for(j=0; j < (int)i_qstr_s->len; j++){
+    for(j=0; j < i_qstr_s->len; j++){
         if(i_qstr_s->data[j] == '&'){
             dict = (qstr_dict_t*) ngx_array_push(o_qstr_dict_a);
             split_by_eq(i_qstr_s, i, j-1, dict);
@@ -29,7 +29,7 @@ void ngx_http_tidehunter_parse_qstr(ngx_str_t *i_qstr_s, ngx_array_t *o_qstr_dic
     }
 }
 
-static int split_by_eq(ngx_str_t *i_qstr_s, int start, int end, qstr_dict_t *o_dict){
+static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qstr_dict_t *o_dict){
     // split query string by `=' symbol.
     // @params in:  i_qstr_s: query string. `a=1'
     // @params out: o_dict: {name="a", value="1"}
@@ -47,7 +47,7 @@ static int split_by_eq(ngx_str_t *i_qstr_s, int start, int end, qstr_dict_t *o_d
     if(start > end){
         return -1;
     }
-    int eq_pos;                 /* FIXME: is it unsafe to use a int as offset instead of unsigned int? */
+    ngx_uint_t eq_pos;          /* FIXME: is it unsafe to use a int as offset instead of unsigned int? */
     for(eq_pos=start;
         eq_pos <= end && i_qstr_s->data[eq_pos] != '=';
         eq_pos++);              /* find the `=' position */

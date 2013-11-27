@@ -1,5 +1,6 @@
 #include "ngx_http_tidehunter_module.h"
 #include "ngx_http_tidehunter_parse.h"
+#include "ngx_http_tidehunter_filter.h"
 
 static ngx_http_module_t ngx_http_tidehunter_module_ctx = {
     NULL,
@@ -64,6 +65,22 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
 static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_main_conf_t *mcf;
     mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_main_conf_t));
+    mcf->filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
+    /* hand-make a filter rule up, qstr filter */
+    ngx_http_tidehunter_filter_rule_t *tmp_rule = ngx_array_push(mcf->filter_rule_a);
+    ngx_http_tidehunter_filter_rule_t tmp  = {
+        ngx_string("qstr filter"),
+        ngx_string("testid"),
+        23,
+        ngx_http_tidehunter_filter_qstr,
+        {
+            MO_EXACT_MATCH,
+            ngx_string("hello"),
+            ngx_null_string
+        }
+    };
+    ngx_memcpy(tmp_rule, &tmp, sizeof(ngx_http_tidehunter_filter_rule_t));
+    /* hand-make end */
     return mcf;
 }
 
@@ -74,16 +91,40 @@ static void* ngx_http_tidehunter_create_loc_conf(ngx_conf_t *cf){
 }
 
 static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
-    ngx_array_t *qstr_dict_a = ngx_array_create(req->pool, 2, sizeof(qstr_dict_t));
-    ngx_http_tidehunter_parse_qstr(&req->args, qstr_dict_a);
-    qstr_dict_t *qstr_dict = qstr_dict_a->elts;
-    int i;
-    for(i=0; i < (int)qstr_dict_a->nelts; i++){
-        fprintf(stderr, "[%.*s==%.*s]\n", (int)qstr_dict[i].name.len, qstr_dict[i].name.data,
-                (int)qstr_dict[i].value.len, qstr_dict[i].value.data);
+    ngx_http_tidehunter_main_conf_t *mcf = ngx_http_get_module_main_conf(req,ngx_http_tidehunter_module);
+    if(mcf == NULL){
+        return NGX_DECLINED;
+    }
+    if(req->internal == 1){
+        return NGX_DECLINED;
+    }
+    ngx_array_t *filter_rule_a = mcf->filter_rule_a;
+    ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
+    ngx_uint_t i;
+    int filter_rv;
+    for(i=0; i < filter_rule_a->nelts; i++){
+        fprintf(stderr, "msg==%.*s\n", (int)filter_rule[i].msg.len, filter_rule[i].msg.data);
+        filter_rv = filter_rule[i].filter(req, &filter_rule[i].opt);
+        if(filter_rv > 0){
+            fprintf(stderr, "MATCH\n");
+        }
     }
     return NGX_DECLINED;
 }
+
+/*
+static ngx_int_t ngx_http_tidehunter_rewrite_handler_2(ngx_http_request_t *req){
+    ngx_array_t *qstr_dict_a = ngx_array_create(req->pool, 2, sizeof(qstr_dict_t));
+    ngx_http_tidehunter_parse_qstr(&req->args, qstr_dict_a);
+    qstr_dict_t *qstr_dict = qstr_dict_a->elts;
+    ngx_uint_t i;
+    for(i=0; i < qstr_dict_a->nelts; i++){
+        fprintf(stderr, "[%.*s==%.*s]\n", (int)qstr_dict[i].name.len, qstr_dict[i].name.data,
+                                          (int)qstr_dict[i].value.len, qstr_dict[i].value.data);
+    }
+    return NGX_DECLINED;
+}
+*/
 
 static char* ngx_http_tidehunter_test(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
     return NGX_CONF_OK;
