@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdio.h>
 #include <nginx.h>
 #include <ngx_config.h>

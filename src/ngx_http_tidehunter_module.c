@@ -2,6 +2,14 @@
 #include "ngx_http_tidehunter_parse.h"
 #include "ngx_http_tidehunter_filter.h"
 
+
+static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf);
+static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf);
+static void* ngx_http_tidehunter_create_loc_conf(ngx_conf_t *cf);
+static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req);
+static char* ngx_http_tidehunter_test(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
+
 static ngx_http_module_t ngx_http_tidehunter_module_ctx = {
     NULL,
     ngx_http_tidehunter_init,
@@ -54,6 +62,11 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
     if(ccf == NULL || mcf == NULL){
         return NGX_ERROR;
     }
+
+    /* initialize the filter rule */
+    ngx_http_tidehunter_filter_init_rule(mcf, cf->pool);
+
+    /* initialize the REWRITE handler */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
@@ -66,8 +79,8 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_main_conf_t *mcf;
     mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_main_conf_t));
     mcf->filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
-#define DEBUG
-#ifdef DEBUG
+    //#define RS_DEBUG
+#ifdef RS_DEBUG
     /* hand-make a filter rule up, qstr filter */
     ngx_http_tidehunter_filter_rule_t *tmp_rule = ngx_array_push(mcf->filter_rule_a);
     ngx_http_tidehunter_filter_rule_t tmp  = {
@@ -77,13 +90,13 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
         ngx_http_tidehunter_filter_qstr,
         {
             MO_REG_MATCH,
-            ngx_string("hello"),
-            NULL,                   /* the regex ptr */
+            ngx_null_string,
+            NULL,                   /* the compile_regex ptr to be init */
         }
     };
     if(tmp.opt.match_opt == MO_REG_MATCH){
         ngx_regex_compile_t *regex = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t));
-        ngx_str_set(&regex->pattern, "hello");
+        ngx_str_set(&regex->pattern, "^hello");
         regex->options = NGX_REGEX_CASELESS;
         regex->pool = cf->pool;
         if(ngx_regex_compile(regex) != NGX_OK){

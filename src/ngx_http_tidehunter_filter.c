@@ -34,6 +34,10 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
       @return: `0' == match. `1' == NOT match
     */
     int rv = 1;                 /* default is NOT match: (rv != 1) */
+    if(i_target_s->len == 0){
+        /* empty string */
+        return rv;
+    }
     if(opt->exact_match_s.len > i_target_s->len){
         /* target string is shorter than match str, quit with NOT match */
         return rv;
@@ -53,4 +57,34 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
 #endif
     }
     return rv;
+}
+
+int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                         ngx_pool_t *pool){
+    /* hand-make a filter rule up, qstr filter */
+    ngx_http_tidehunter_filter_rule_t *filter_rule = ngx_array_push(mcf->filter_rule_a);
+    ngx_http_tidehunter_filter_rule_t tmp_rule  = {
+        ngx_string("qstr filter"), /* msg */
+        ngx_string("1001"),        /* id */
+        8,                         /* weight */
+        ngx_http_tidehunter_filter_qstr,
+        {
+            MO_REG_MATCH,
+            ngx_null_string,
+            NULL                   /* the compile_regex ptr to be init */
+        }
+    };
+    if(tmp_rule.opt.match_opt == MO_REG_MATCH){
+        ngx_regex_compile_t *regex = ngx_pcalloc(pool, sizeof(ngx_regex_compile_t));
+        ngx_str_set(&regex->pattern, "^hello$");
+        regex->options = NGX_REGEX_CASELESS;
+        regex->pool = pool;
+        if(ngx_regex_compile(regex) != NGX_OK){
+            fprintf(stderr, "regex compile fail\n");
+        }
+        tmp_rule.opt.compile_regex = regex;
+    }
+    ngx_memcpy(filter_rule, &tmp_rule, sizeof(ngx_http_tidehunter_filter_rule_t));
+    /* hand-make end */
+    return 0;
 }

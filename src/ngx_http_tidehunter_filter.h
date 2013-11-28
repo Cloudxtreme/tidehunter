@@ -2,6 +2,7 @@
 
 #include "ngx_http_tidehunter_common.h"
 #include "ngx_http_tidehunter_parse.h"
+#include "ngx_http_tidehunter_module.h"
 
 /*
 the filter_* functions should all be implemented like:
@@ -34,3 +35,6 @@ typedef struct{
 
 int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
                                     ngx_http_tidehunter_filter_option_t *opt);
+
+int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                         ngx_pool_t *pool);
