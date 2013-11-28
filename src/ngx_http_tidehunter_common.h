@@ -6,3 +6,4 @@
 #include <ngx_log.h>
 #include <ngx_string.h>
 #include <ngx_array.h>
+#include <ngx_regex.h>

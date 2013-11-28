@@ -66,21 +66,34 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_main_conf_t *mcf;
     mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_main_conf_t));
     mcf->filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
+#define DEBUG
+#ifdef DEBUG
     /* hand-make a filter rule up, qstr filter */
     ngx_http_tidehunter_filter_rule_t *tmp_rule = ngx_array_push(mcf->filter_rule_a);
     ngx_http_tidehunter_filter_rule_t tmp  = {
-        ngx_string("qstr filter"),
-        ngx_string("testid"),
-        23,
+        ngx_string("qstr filter"), /* msg */
+        ngx_string("1001"),        /* id */
+        8,                         /* weight */
         ngx_http_tidehunter_filter_qstr,
         {
-            MO_EXACT_MATCH_IGNORE_CASE,
+            MO_REG_MATCH,
             ngx_string("hello"),
-            ngx_null_string
+            NULL,                   /* the regex ptr */
         }
     };
+    if(tmp.opt.match_opt == MO_REG_MATCH){
+        ngx_regex_compile_t *regex = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t));
+        ngx_str_set(&regex->pattern, "hello");
+        regex->options = NGX_REGEX_CASELESS;
+        regex->pool = cf->pool;
+        if(ngx_regex_compile(regex) != NGX_OK){
+            fprintf(stderr, "regex compile fail\n");
+        }
+        tmp.opt.compile_regex = regex;
+    }
     ngx_memcpy(tmp_rule, &tmp, sizeof(ngx_http_tidehunter_filter_rule_t));
     /* hand-make end */
+#endif
     return mcf;
 }
 

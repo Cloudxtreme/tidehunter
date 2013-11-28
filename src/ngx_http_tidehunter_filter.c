@@ -45,7 +45,9 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
     } else if(opt->match_opt == MO_REG_MATCH){
         //FIXME
 #if (NGX_PCRE)
-        fprintf(stderr, "not implemented yet\n");
+        int capture[6];
+        ngx_regex_exec(opt->compile_regex->regex, i_target_s, capture, 6);
+        fprintf(stderr, "capture: %d\n", capture[0]);
 #else
         fprintf(stderr, "reg match rule requires PCRE library\n");
 #endif
