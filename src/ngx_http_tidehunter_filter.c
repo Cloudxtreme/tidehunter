@@ -1,7 +1,9 @@
 #include "ngx_http_tidehunter_filter.h"
+#include "ngx_http_tidehunter_json.h"
 
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt);
+
 
 int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
                                     ngx_http_tidehunter_filter_option_t *opt){
@@ -63,6 +65,8 @@ int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
                                          ngx_pool_t *pool){
     /* hand-make a filter rule up, qstr filter */
     ngx_http_tidehunter_filter_rule_t *filter_rule = ngx_array_push(mcf->filter_rule_a);
+    ngx_str_t fname = ngx_string("/tmp/test.json");
+    ngx_http_tidehunter_load_rule(&fname, filter_rule, pool);
     ngx_http_tidehunter_filter_rule_t tmp_rule  = {
         ngx_string("qstr filter"), /* msg */
         ngx_string("1001"),        /* id */
