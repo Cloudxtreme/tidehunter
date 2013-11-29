@@ -33,34 +33,42 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
     /*
       @param in: i_target_s: ngx_str_t to be match
       @param in: opt       : contains match pattern
-      @return: `0' == match. `1' == NOT match
+      @return: `0' == match. `not 0' == NOT match
     */
-    int rv = 1;                 /* default is NOT match: (rv != 1) */
-    if(i_target_s->len == 0){
+    if (i_target_s->len == 0) {
         /* empty string */
-        return rv;
+        return -1;
     }
-    if(opt->exact_str.len > i_target_s->len){
+    if (opt->exact_str.len > i_target_s->len) {
         /* target string is shorter than match str, quit with NOT match */
-        return rv;
+        return -1;
     }
-    if(opt->match_opt == MO_EXACT_MATCH){
-        rv = ngx_strncmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len);
-    } else if(opt->match_opt == MO_EXACT_MATCH_IGNORE_CASE){
-        rv = ngx_strncasecmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len);
-    } else if(opt->match_opt == MO_REG_MATCH){
+    if (opt->match_opt == MO_EXACT_MATCH) {
+        if (opt->exact_str.len == 0) {
+            return -1;
+        }
+        return ngx_strncmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len); /* FIXME: this return sucks */
+    } else if (opt->match_opt == MO_EXACT_MATCH_IGNORE_CASE) {
+        if (opt->exact_str.len == 0) {
+            return -1;
+        }
+        return ngx_strncasecmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len);
+    } else if (opt->match_opt == MO_REG_MATCH){
         //FIXME
 #if (NGX_PCRE)
         int capture[3];         /* a multlple of 3, require by pcre */
+        if (opt->compile_regex == NULL) {
+            return -1;
+        }
         ngx_regex_exec(opt->compile_regex->regex, i_target_s, capture, 3);
         if (capture[0] > -1) {
-            rv = 0;
+            return 0;
         }
 #else
         fprintf(stderr, "reg match rule requires PCRE library\n");
 #endif
     }
-    return rv;
+    return -1;                  /* no one go here */
 }
 
 int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,

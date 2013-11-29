@@ -2,6 +2,7 @@
 #include "ngx_http_tidehunter_parse.h"
 #include "ngx_http_tidehunter_filter.h"
 
+#include "ngx_http_tidehunter_debug.h"
 
 static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf);
 static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf);
@@ -79,34 +80,6 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_main_conf_t *mcf;
     mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_main_conf_t));
     mcf->filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
-    //#define RS_DEBUG
-#ifdef RS_DEBUG
-    /* hand-make a filter rule up, qstr filter */
-    ngx_http_tidehunter_filter_rule_t *tmp_rule = ngx_array_push(mcf->filter_rule_a);
-    ngx_http_tidehunter_filter_rule_t tmp  = {
-        ngx_string("qstr filter"), /* msg */
-        ngx_string("1001"),        /* id */
-        8,                         /* weight */
-        ngx_http_tidehunter_filter_qstr,
-        {
-            MO_REG_MATCH,
-            ngx_null_string,
-            NULL,                   /* the compile_regex ptr to be init */
-        }
-    };
-    if(tmp.opt.match_opt == MO_REG_MATCH){
-        ngx_regex_compile_t *regex = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t));
-        ngx_str_set(&regex->pattern, "^hello");
-        regex->options = NGX_REGEX_CASELESS;
-        regex->pool = cf->pool;
-        if(ngx_regex_compile(regex) != NGX_OK){
-            fprintf(stderr, "regex compile fail\n");
-        }
-        tmp.opt.compile_regex = regex;
-    }
-    ngx_memcpy(tmp_rule, &tmp, sizeof(ngx_http_tidehunter_filter_rule_t));
-    /* hand-make end */
-#endif
     return mcf;
 }
 
@@ -127,13 +100,13 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_array_t *filter_rule_a = mcf->filter_rule_a;
     ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
     ngx_uint_t i;
-    int filter_rv;
+    int filter_rv = 0;
     for(i=0; i < filter_rule_a->nelts; i++){
-        filter_rv = filter_rule[i].filter(req, &filter_rule[i].opt);
-        if(filter_rv > 0){
-            fprintf(stderr, "MATCH HIT:%d\n", filter_rv);
-            return NGX_HTTP_BAD_REQUEST;
-        }
+        filter_rv += filter_rule[i].filter(req, &filter_rule[i].opt);
+    }
+    if(filter_rv > 0){
+        PRINT_INT("MATCH HIT:", filter_rv);
+        return NGX_HTTP_BAD_REQUEST;
     }
     return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
 }
