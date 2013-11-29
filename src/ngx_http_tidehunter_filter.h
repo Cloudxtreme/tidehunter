@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct{
     ngx_http_tidehunter_match_option_e match_opt;
-    ngx_str_t exact_match_s;
+    ngx_str_t exact_str;
     ngx_regex_compile_t *compile_regex;
 } ngx_http_tidehunter_filter_option_t;
 

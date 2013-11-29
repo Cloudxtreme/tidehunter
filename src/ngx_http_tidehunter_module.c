@@ -129,7 +129,6 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_uint_t i;
     int filter_rv;
     for(i=0; i < filter_rule_a->nelts; i++){
-        // fprintf(stderr, "msg==%.*s\n", (int)filter_rule[i].msg.len, filter_rule[i].msg.data);
         filter_rv = filter_rule[i].filter(req, &filter_rule[i].opt);
         if(filter_rv > 0){
             fprintf(stderr, "MATCH HIT:%d\n", filter_rv);
@@ -138,20 +137,6 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     }
     return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
 }
-
-/*
-static ngx_int_t ngx_http_tidehunter_rewrite_handler_2(ngx_http_request_t *req){
-    ngx_array_t *qstr_dict_a = ngx_array_create(req->pool, 2, sizeof(qstr_dict_t));
-    ngx_http_tidehunter_parse_qstr(&req->args, qstr_dict_a);
-    qstr_dict_t *qstr_dict = qstr_dict_a->elts;
-    ngx_uint_t i;
-    for(i=0; i < qstr_dict_a->nelts; i++){
-        fprintf(stderr, "[%.*s==%.*s]\n", (int)qstr_dict[i].name.len, qstr_dict[i].name.data,
-                                          (int)qstr_dict[i].value.len, qstr_dict[i].value.data);
-    }
-    return NGX_DECLINED;
-}
-*/
 
 static char* ngx_http_tidehunter_test(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
     return (NGX_CONF_OK);

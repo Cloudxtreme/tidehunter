@@ -7,5 +7,5 @@
 
 
 int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
-                                  ngx_http_tidehunter_filter_rule_t *rule,
+                                  ngx_array_t *rule_a,
                                   ngx_pool_t *pool);

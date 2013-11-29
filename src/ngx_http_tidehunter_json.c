@@ -1,4 +1,6 @@
 #include "ngx_http_tidehunter_json.h"
+#include "ngx_http_tidehunter_filter.h"
+
 
 //FIXME: convert long to int
 #define JSON_GET_INT(json, key) ((int)json_integer_value(json_object_get(json, key)))
@@ -12,9 +14,11 @@ static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
                             ngx_pool_t *pool);
 
+static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
+
 
 int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
-                                  ngx_http_tidehunter_filter_rule_t *rule,
+                                  ngx_array_t *rule_a,
                                   ngx_pool_t *pool){
     /*
       json format:
@@ -48,12 +52,17 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
         fprintf(stderr, "json file hasn't a json array at top\n");
         return -2;
     }
-    json_t *rule_json_obj = json_array_get(json, 0);
-    if( !rule_json_obj ){
-        fprintf(stderr, "fail to get rule in json array\n");
-        return -3;
+    size_t array_size = json_array_size(json);
+    size_t i;
+    for (i=0; i < array_size; i++){
+        json_t *rule_json_obj = json_array_get(json, i);
+        if( !rule_json_obj ){
+            fprintf(stderr, "fail to get rule in json array\n");
+            return -3;
+        }
+        ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(rule_a);
+        fill_filter_rule(rule_json_obj, rule, pool);
     }
-    fill_filter_rule(rule_json_obj, rule, pool);
     return 0;
 }
 
@@ -66,18 +75,51 @@ static int fill_filter_rule(json_t* rule_json_obj,
     json_t *weight_json_int = json_object_get(rule_json_obj, "weight");
     json_t *filter_json_int = json_object_get(rule_json_obj, "filter");
     */
-    json_t *opt_json_obj = json_object_get(rule_json_obj, "optx");
+
+    jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
+    jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
+    rule->weight = JSON_GET_INT(rule_json_obj, "weight");
+    rule->filter = ngx_http_tidehunter_filter_qstr; /* FIXME */
+
+    json_t *opt_json_obj = json_object_get(rule_json_obj, "opt");
+    if (json_is_object(opt_json_obj)) {
+        rule->opt.match_opt = JSON_GET_INT(opt_json_obj, "match_opt");
+        jsonstr2ngxstr(json_object_get(opt_json_obj, "exact_str"), &rule->opt.exact_str, pool);
+        if(rule->opt.match_opt == MO_REG_MATCH){
+            ngx_regex_compile_t *rc = ngx_pcalloc(pool, sizeof(ngx_regex_compile_t));
+            jsonstr2ngxstr(json_object_get(opt_json_obj, "regex_str"), &rc->pattern, pool);
+            rc->options = NGX_REGEX_CASELESS;
+            rc->pool = pool;
+            if(ngx_regex_compile(rc) != NGX_OK){
+                fprintf(stderr, "regex compile fail\n");
+            }
+            rule->opt.compile_regex = rc;
+        }
+    }
 #define RS_DEBUG
 #ifdef RS_DEBUG
     JSON_DBG_STR(rule_json_obj, "msg");
     JSON_DBG_STR(rule_json_obj, "id");
     JSON_DBG_INT(rule_json_obj, "weight");
     JSON_DBG_INT(rule_json_obj, "filter");
-    if( json_is_object(opt_json_obj) ){
+    if (json_is_object(opt_json_obj)) {
         JSON_DBG_INT(opt_json_obj, "match_opt");
-        //json_array_get(opt_json_obj, "exact_str");
-        //json_array_get(opt_json_obj, "regex_str");
-        }
+        JSON_DBG_STR(opt_json_obj, "exact_str");
+        JSON_DBG_STR(opt_json_obj, "regex_str");
+    }
 #endif
+    return 0;
+}
+
+static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool){
+    /* copy json string to ngxstr struct, alloc new memory in pool */
+    const char *str;
+    if(json == NULL){
+        return -1;
+    }
+    str = json_string_value(json);
+    ngxstr->len = ngx_strlen(str);
+    ngxstr->data = ngx_pcalloc(pool, sizeof(char)*ngxstr->len);
+    ngx_memcpy(ngxstr->data, str, ngxstr->len);
     return 0;
 }
