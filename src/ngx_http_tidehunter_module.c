@@ -68,7 +68,7 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
     ngx_http_tidehunter_filter_init_rule(mcf, cf->pool);
 
     /* initialize the REWRITE handler */
-    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
+    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_ACCESS_PHASE].handlers);
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
     }
@@ -95,6 +95,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         return (NGX_DECLINED);
     }
     if(req->internal == 1){
+        /* never filter on internal request */
         return (NGX_DECLINED);
     }
     ngx_array_t *filter_rule_a = mcf->filter_rule_a;
@@ -106,7 +107,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     }
     if(filter_rv > 0){
         PRINT_INT("MATCH HIT:", filter_rv);
-        return NGX_HTTP_BAD_REQUEST;
+        return (NGX_HTTP_BAD_REQUEST);
     }
     return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
 }

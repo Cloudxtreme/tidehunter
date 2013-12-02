@@ -1,8 +1,9 @@
 /* many macros for debuging */
-#define MESSAGE(info) fprintf(stderr, info "\n");
-#define MESSAGE2(info, str) fprintf(stderr, info "%s\n", str);
+#define MESSAGE(info) fprintf(stderr, info "\n")
+#define MESSAGE2(info, str) fprintf(stderr, info "%s\n", str)
+#define LOG_ERR(info, log) ngx_log_error(NGX_LOG_ERR, log, 0, info)
 
-#define DEBUG_FLAG 0
+#define DEBUG_FLAG 1
 
 #define IFDEBUG(block) do { if (DEBUG_FLAG) { block; } } while(0)
 

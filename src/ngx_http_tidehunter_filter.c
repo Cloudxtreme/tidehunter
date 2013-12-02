@@ -1,5 +1,8 @@
+#include "ngx_http_tidehunter_common.h"
 #include "ngx_http_tidehunter_filter.h"
 #include "ngx_http_tidehunter_json.h"
+
+#include "ngx_http_tidehunter_debug.h"
 
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt);
@@ -14,16 +17,22 @@ int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
       @return: match count
     */
     ngx_array_t *qstr_dict_a = ngx_array_create(req->pool, 2, sizeof(qstr_dict_t));
-    ngx_http_tidehunter_parse_qstr(&req->args, qstr_dict_a);
+    if (qstr_dict_a == NULL) {
+        LOG_ERR("tidehunter_filter_qstr array init failed", req->connection->log);
+        return 0;
+    }
+    ngx_str_t unescape_args;
+    ngx_http_tidehunter_unescape_args(req, &unescape_args, &req->args);
+    ngx_http_tidehunter_parse_qstr(req, &unescape_args, qstr_dict_a); /* FIXME: should NOT parse for every rule */
     qstr_dict_t *qstr_dict = qstr_dict_a->elts;
     int match_hit = 0;
     ngx_uint_t i;
     int filter_rv;
     for(i=0; i < qstr_dict_a->nelts; i++){
         filter_rv = ngx_http_tidehunter_filter_match(&qstr_dict[i].name, opt);
-        if(filter_rv == 0) match_hit++;
+        if (filter_rv == 0) match_hit++;
         filter_rv = ngx_http_tidehunter_filter_match(&qstr_dict[i].value, opt);
-        if(filter_rv == 0) match_hit++;
+        if (filter_rv == 0) match_hit++;
     }
     return match_hit;
 }
@@ -54,7 +63,6 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
         }
         return ngx_strncasecmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len);
     } else if (opt->match_opt == MO_REG_MATCH){
-        //FIXME
 #if (NGX_PCRE)
         int capture[3];         /* a multlple of 3, require by pcre */
         if (opt->compile_regex == NULL) {
@@ -74,8 +82,8 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
 int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
                                          ngx_pool_t *pool){
     ngx_str_t fname = ngx_string("/tmp/rule.json");
-    ngx_http_tidehunter_load_rule(&fname, mcf->filter_rule_a, pool); /* load_rule implementation is on independ, json, yaml
-                                                                                  whatever you want. a json rule loader in currently
-                                                                                  implemented by me. */
+    ngx_http_tidehunter_load_rule(&fname, mcf->filter_rule_a, pool); /* load_rule implementation is independent, json, yaml
+                                                                        whatever you want. a json rule loader in currently
+                                                                        implemented by me. */
     return 0;
 }

@@ -23,6 +23,8 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
                                   ngx_array_t *rule_a,
                                   ngx_pool_t *pool){
     /*
+      @return: 0 == success
+
       json format:
       [ {
           "msg": "xxx",             string
@@ -74,10 +76,7 @@ static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
                             ngx_pool_t *pool){
     /*
-    json_t *msg_json_str = json_object_get(rule_json_obj, "msg");
-    json_t *id_json_str = json_object_get(rule_json_obj, "id");
-    json_t *weight_json_int = json_object_get(rule_json_obj, "weight");
-    json_t *filter_json_int = json_object_get(rule_json_obj, "filter");
+      @return: 0 == success
     */
 
     jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
@@ -118,7 +117,7 @@ static int fill_filter_rule(json_t* rule_json_obj,
             if (jsonstr2ngxstr(json_object_get(opt_json_obj, "exact_str"), &rule->opt.exact_str, pool) != 0){
                 MESSAGE("NOT exact_str found\n");
                 rule->opt.exact_str.len = 0; /* make sure exact_str is zero length */
-                return -1;
+                return -3;
             }
         }
     }
