@@ -79,7 +79,7 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
 static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_main_conf_t *mcf;
     mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_main_conf_t));
-    mcf->filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
+    mcf->head_filter_rule_a = ngx_array_create(cf->pool, 2, sizeof(ngx_http_tidehunter_filter_rule_t));
     return mcf;
 }
 
@@ -98,7 +98,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         /* never filter on internal request */
         return (NGX_DECLINED);
     }
-    ngx_array_t *filter_rule_a = mcf->filter_rule_a;
+    ngx_array_t *filter_rule_a = mcf->head_filter_rule_a;
     ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
     ngx_uint_t i;
     int filter_rv = 0;

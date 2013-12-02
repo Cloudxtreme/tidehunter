@@ -82,7 +82,7 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
 int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
                                          ngx_pool_t *pool){
     ngx_str_t fname = ngx_string("/tmp/rule.json");
-    ngx_http_tidehunter_load_rule(&fname, mcf->filter_rule_a, pool); /* load_rule implementation is independent, json, yaml
+    ngx_http_tidehunter_load_rule(&fname, mcf->head_filter_rule_a, pool); /* load_rule implementation is independent, json, yaml
                                                                         whatever you want. a json rule loader in currently
                                                                         implemented by me. */
     return 0;
