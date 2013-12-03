@@ -25,7 +25,7 @@ void ngx_http_tidehunter_parse_qstr(ngx_http_request_t *req, ngx_str_t *i_qstr_s
         if (i_qstr_s->data[j] == '&') {
             dict = (qstr_dict_t*) ngx_array_push(o_qstr_dict_a);
             if (dict == NULL) {
-                LOG_ERR("tidehunter_parse_qstr, array push fail", req->connection->log);
+                LOG_ERR("array push fail", req->connection->log);
                 return;
             }
             split_by_eq(i_qstr_s, i, j-1, dict);
@@ -35,7 +35,7 @@ void ngx_http_tidehunter_parse_qstr(ngx_http_request_t *req, ngx_str_t *i_qstr_s
     if(i < j){                  /* the last name/value pair */
         dict = (qstr_dict_t*) ngx_array_push(o_qstr_dict_a);
         if (dict == NULL) {
-            LOG_ERR("tidehunter_parse_qstr, array push fail", req->connection->log);
+            LOG_ERR("array push fail", req->connection->log);
             return;
         }
         split_by_eq(i_qstr_s, i, j-1, dict);
@@ -52,6 +52,7 @@ static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qs
 
       note: the o_dict's member, eg. o_dict->name, its data ptr is point to
             the original request uri memory address, so change the uri will affect it.
+
 
       `abc=123'
        |  || |
@@ -93,7 +94,7 @@ void ngx_http_tidehunter_unescape_args(ngx_http_request_t *req, ngx_str_t *dst, 
     }
     ngx_unescape_uri(&buf, &src->data, src->len, 0); /* `0' is quite hackie, refer to ngx_unescape_uri */
     if (src->data != src_start + src->len) {
-        LOG_ERR("tidehunter_unescape_uri: input data not consumed completely", req->connection->log);
+        LOG_ERR("unescape_uri: input data not consumed completely", req->connection->log);
     }
     dst->len = buf - buf_start;
     dst->data = buf_start;

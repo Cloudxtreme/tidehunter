@@ -4,7 +4,13 @@ some common code style:
     - *_a: is ngx_array_t
     - *_s: is ngx_str_t
 
--prefix:
+- prefix:
     - i_*: is input param
     - o_*: is output param
     - io_*: is in&out param
+
+NOTE:
+
+* and the ngx_str_t is DESIGNED to use ngx_str_t.len to test the EOS right?
+  so I didn't put `\0' when not need, but pcre_compile need a '\0'.
+  refer to json's jsonstr2ngxstr function please. sorry I mess up.

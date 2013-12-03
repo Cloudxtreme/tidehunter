@@ -28,13 +28,14 @@ typedef struct{
     ngx_str_t msg;
     ngx_str_t id;
     ngx_int_t weight;
-    int (*filter)(ngx_http_request_t *req,
-                  ngx_http_tidehunter_filter_option_t *opt); /* a filter func ptr */
-    ngx_http_tidehunter_filter_option_t opt;                 /* option for filter func ptr */
+    ngx_int_t (*filter)(ngx_http_request_t *req,
+                        ngx_http_tidehunter_filter_option_t *opt); /* a filter func ptr */
+    ngx_http_tidehunter_filter_option_t opt;                       /* option for filter func ptr */
 } ngx_http_tidehunter_filter_rule_t;
 
-int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
-                                    ngx_http_tidehunter_filter_option_t *opt);
+ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
+                                          ngx_http_tidehunter_filter_option_t *opt);
 
-int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                         ngx_pool_t *pool);
+ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                               ngx_pool_t *pool);
+

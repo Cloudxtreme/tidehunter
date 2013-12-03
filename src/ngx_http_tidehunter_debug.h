@@ -1,7 +1,9 @@
 /* many macros for debuging */
 #define MESSAGE(info) fprintf(stderr, info "\n")
-#define MESSAGE2(info, str) fprintf(stderr, info "%s\n", str)
-#define LOG_ERR(info, log) ngx_log_error(NGX_LOG_ERR, log, 0, info)
+#define MESSAGE_S(info, str) fprintf(stderr, info "%s\n", str)
+#define MESSAGE_D(info, i) fprintf(stderr, info "%d\n", i)
+#define TOSTRING(n) #n
+#define LOG_ERR(info, log) ngx_log_error(NGX_LOG_ERR, log, 0, info __FILE__ ":L" TOSTRING(__LINE__))
 
 #define DEBUG_FLAG 1
 

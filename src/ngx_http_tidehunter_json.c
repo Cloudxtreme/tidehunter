@@ -47,7 +47,7 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
     fname_str[fname->len] = '\0';
     json = json_load_file(fname_str, 0, &error);
     if( !json ){
-        MESSAGE2("fail to load json file:", fname_str);
+        MESSAGE_S("fail to load json file:", fname_str);
         return -1;
     }
     free(fname_str);
@@ -59,6 +59,7 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
 
     size_t array_size = json_array_size(json);
     size_t i;
+    rule_a = ngx_array_create(pool, array_size, sizeof(ngx_http_tidehunter_filter_rule_t));
     for (i=0; i < array_size; i++){
         json_t *rule_json_obj = json_array_get(json, i);
         if( !rule_json_obj ){
@@ -78,6 +79,7 @@ static int fill_filter_rule(json_t* rule_json_obj,
     /*
       @return: 0 == success
     */
+    u_char errstr[NGX_MAX_CONF_ERRSTR];
 
     jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
     jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
@@ -103,12 +105,17 @@ static int fill_filter_rule(json_t* rule_json_obj,
             ngx_regex_compile_t *rc = ngx_pcalloc(pool, sizeof(ngx_regex_compile_t));
             if (jsonstr2ngxstr(json_object_get(opt_json_obj, "regex_str"), &rc->pattern, pool) != 0){
                 MESSAGE("NOT regex_str found");
+                JSON_DBG_STR(rule_json_obj, "id");
                 return -1;
             }
             rc->options = NGX_REGEX_CASELESS;
             rc->pool = pool;
+            rc->err.len = NGX_MAX_CONF_ERRSTR;
+            rc->err.data = errstr; /* the errstr is on the stack */
             if(ngx_regex_compile(rc) != NGX_OK){
                 MESSAGE("regex compile fail");
+                JSON_DBG_STR(rule_json_obj, "id");
+                PRINT_NGXSTR("err", rc->err);
                 return -2;
             }
             rule->opt.compile_regex = rc;
@@ -136,7 +143,7 @@ static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool){
         return -2;
     }
     ngxstr->len = ngx_strlen(str);
-    ngxstr->data = ngx_pcalloc(pool, sizeof(char)*ngxstr->len);
+    ngxstr->data = ngx_pcalloc(pool, sizeof(u_char)*(ngxstr->len+1)); /* save one more byte for `\0' */
     ngx_memcpy(ngxstr->data, str, ngxstr->len);
     return 0;
 }

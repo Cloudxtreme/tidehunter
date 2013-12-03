@@ -4,12 +4,12 @@
 
 #include "ngx_http_tidehunter_debug.h"
 
+
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt);
 
-
-int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
-                                    ngx_http_tidehunter_filter_option_t *opt){
+ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
+                                          ngx_http_tidehunter_filter_option_t *opt){
     /*
       filter for the query string
       @param in: req: http request
@@ -36,6 +36,21 @@ int ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
     }
     return match_hit;
 }
+
+/*
+ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
+                                    ngx_http_tidehunter_filter_option_t *opt){
+    // test whether rb is in BUFS, BUF, TEMP_FILE
+    if (!rb->temp_file) {
+        // request body is in the buf OR bufs chain
+        if (rb->bufs->next == NULL) {
+            // request body in buf
+        }
+    } else {
+        // request body is in a temp file.
+    }
+}
+*/
 
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt){
@@ -79,11 +94,11 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
     return -1;                  /* no one go here */
 }
 
-int ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                         ngx_pool_t *pool){
-    ngx_str_t fname = ngx_string("/tmp/rule.json");
-    ngx_http_tidehunter_load_rule(&fname, mcf->head_filter_rule_a, pool); /* load_rule implementation is independent, json, yaml
-                                                                        whatever you want. a json rule loader in currently
-                                                                        implemented by me. */
-    return 0;
+ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                               ngx_pool_t *pool){
+    /* load_rule implementation is independent, json, yaml
+       whatever you want. a json rule loader in currently
+       implemented by me. */
+    ngx_str_t fname = ngx_string("/tmp/rule.json"); /* FIXME: add a directive for setting filename */
+    return ngx_http_tidehunter_load_rule(&fname, mcf->head_filter_rule_a, pool);
 }
