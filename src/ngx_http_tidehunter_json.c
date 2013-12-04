@@ -1,5 +1,6 @@
 #include "ngx_http_tidehunter_json.h"
 #include "ngx_http_tidehunter_filter.h"
+#include "ngx_http_tidehunter_const.h"
 
 //#define RS_DEBUG
 
@@ -14,13 +15,15 @@
 
 static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
+                            ngx_http_tidehunter_filter_type_e filter_type,
                             ngx_pool_t *pool);
 
 static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
 
+extern filter_func_ptr_t filter_funcs[FT_TOTAL];
 
-int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
-                                  ngx_array_t **rule_a,
+int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                  ngx_http_tidehunter_filter_type_e filter_type,
                                   ngx_pool_t *pool){
     /*
       @return: 0 == success
@@ -38,13 +41,13 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
           }
         }, .. ]        object
     */
-    PRINT_NGXSTR_PTR("fname:", fname);
+    PRINT_NGXSTR("rule name:", mcf->rulefile[filter_type]);
     json_t *json;
     json_error_t error;
     char * fname_str;
-    fname_str = malloc(fname->len * sizeof(char) + 1);
-    memcpy(fname_str, fname->data, fname->len);
-    fname_str[fname->len] = '\0';
+    fname_str = malloc(mcf->rulefile[filter_type].len * sizeof(char) + 1);
+    memcpy(fname_str, mcf->rulefile[filter_type].data, mcf->rulefile[filter_type].len);
+    fname_str[mcf->rulefile[filter_type].len] = '\0';
     json = json_load_file(fname_str, 0, &error);
     if( !json ){
         MESSAGE_S("fail to load json file:", fname_str);
@@ -59,22 +62,25 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
 
     size_t array_size = json_array_size(json);
     size_t i;
-    *rule_a = ngx_array_create(pool, array_size, sizeof(ngx_http_tidehunter_filter_rule_t));
+    ngx_array_t *rule_a;
+    rule_a = ngx_array_create(pool, array_size, sizeof(ngx_http_tidehunter_filter_rule_t));
     for (i=0; i < array_size; i++){
         json_t *rule_json_obj = json_array_get(json, i);
         if( !rule_json_obj ){
             MESSAGE("fail to get rule in json array");
             return -3;
         }
-        ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(*rule_a);
-        fill_filter_rule(rule_json_obj, rule, pool);
+        ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(rule_a);
+        fill_filter_rule(rule_json_obj, rule, filter_type, pool);
     }
+    mcf->filter_rule_a[filter_type] = rule_a;
     PRINT_INFO("rule loaded");
     return 0;
 }
 
 static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
+                            ngx_http_tidehunter_filter_type_e filter_type,
                             ngx_pool_t *pool){
     /*
       @return: 0 == success
@@ -84,14 +90,13 @@ static int fill_filter_rule(json_t* rule_json_obj,
     jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
     jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
     rule->weight = JSON_GET_INT(rule_json_obj, "weight");
-    rule->filter = ngx_http_tidehunter_filter_qstr; /* FIXME */
+    rule->filter = filter_funcs[filter_type];
     json_t *opt_json_obj = json_object_get(rule_json_obj, "opt");
 
 #ifdef RS_DEBUG
     JSON_DBG_STR(rule_json_obj, "msg");
     JSON_DBG_STR(rule_json_obj, "id");
     JSON_DBG_INT(rule_json_obj, "weight");
-    JSON_DBG_INT(rule_json_obj, "filter");
     if (json_is_object(opt_json_obj)) {
         JSON_DBG_INT(opt_json_obj, "match_opt");
         JSON_DBG_STR(opt_json_obj, "exact_str");

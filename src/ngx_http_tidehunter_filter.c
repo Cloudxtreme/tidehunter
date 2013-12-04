@@ -6,6 +6,8 @@
 #include "ngx_http_tidehunter_debug.h"
 
 
+filter_func_ptr_t filter_funcs[FT_TOTAL]; /* the one and only global */
+
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt);
 
@@ -95,13 +97,14 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
     return -1;                  /* no one go here */
 }
 
-ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_str_t *filename,
-                                               ngx_array_t **filter_rule_a, ngx_pool_t *pool){
+
+ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
+                                               ngx_http_tidehunter_filter_type_e filter_type,
+                                               ngx_pool_t *pool){
     /* load_rule implementation is independent, json, yaml
        whatever you want. a json rule loader in currently
        implemented by me. */
-    if (filename->len == 0) {
-        return -1;
-    }
-    return ngx_http_tidehunter_load_rule(filename, filter_rule_a, pool);
+    filter_funcs[FT_QSTR] = ngx_http_tidehunter_filter_qstr;
+    // filter_funcs[FT_BODY] = ngx_http_tidehunter_filter_body;
+    return ngx_http_tidehunter_load_rule(mcf , filter_type, pool);
 }
