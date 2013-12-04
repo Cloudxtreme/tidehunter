@@ -41,7 +41,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_main_conf_t, rulefile),
+        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t),
         NULL
     },
     ngx_null_command
@@ -76,6 +76,7 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
 
     /* initialize the qstr filter rule */
     ngx_http_tidehunter_filter_init_rule(mcf, FT_QSTR, cf->pool);
+    ngx_http_tidehunter_filter_init_rule(mcf, FT_BODY, cf->pool);
 
     /* set the REWRITE handler */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers); /* why REWIRTE PHASE? */
