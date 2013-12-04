@@ -33,7 +33,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_main_conf_t, rulefile),
+        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t) * FT_QSTR,
         NULL
     },
     {
@@ -41,7 +41,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t),
+        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t) * FT_BODY,
         NULL
     },
     ngx_null_command
