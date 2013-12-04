@@ -1,5 +1,6 @@
 #include "ngx_http_tidehunter_common.h"
 #include "ngx_http_tidehunter_filter.h"
+#include "ngx_http_tidehunter_parse.h"
 #include "ngx_http_tidehunter_json.h"
 
 #include "ngx_http_tidehunter_debug.h"
@@ -94,11 +95,13 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
     return -1;                  /* no one go here */
 }
 
-ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                               ngx_pool_t *pool){
+ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_str_t *filename,
+                                               ngx_array_t **filter_rule_a, ngx_pool_t *pool){
     /* load_rule implementation is independent, json, yaml
        whatever you want. a json rule loader in currently
        implemented by me. */
-    ngx_str_t fname = ngx_string("/tmp/rule.json"); /* FIXME: add a directive for setting filename */
-    return ngx_http_tidehunter_load_rule(&fname, mcf->head_filter_rule_a, pool);
+    if (filename->len == 0) {
+        return -1;
+    }
+    return ngx_http_tidehunter_load_rule(filename, filter_rule_a, pool);
 }

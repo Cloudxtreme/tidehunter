@@ -20,7 +20,7 @@ static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
 
 
 int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
-                                  ngx_array_t *rule_a,
+                                  ngx_array_t **rule_a,
                                   ngx_pool_t *pool){
     /*
       @return: 0 == success
@@ -59,17 +59,17 @@ int ngx_http_tidehunter_load_rule(ngx_str_t *fname,
 
     size_t array_size = json_array_size(json);
     size_t i;
-    rule_a = ngx_array_create(pool, array_size, sizeof(ngx_http_tidehunter_filter_rule_t));
+    *rule_a = ngx_array_create(pool, array_size, sizeof(ngx_http_tidehunter_filter_rule_t));
     for (i=0; i < array_size; i++){
         json_t *rule_json_obj = json_array_get(json, i);
         if( !rule_json_obj ){
             MESSAGE("fail to get rule in json array");
             return -3;
         }
-        ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(rule_a);
+        ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(*rule_a);
         fill_filter_rule(rule_json_obj, rule, pool);
     }
-
+    PRINT_INFO("rule loaded");
     return 0;
 }
 
