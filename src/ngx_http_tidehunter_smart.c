@@ -1,9 +1,11 @@
-#include <math.h>
+//#include <math.h>
 
 #include "ngx_http_tidehunter_smart.h"
 #include "ngx_http_tidehunter_module.h"
 
 #include "ngx_http_tidehunter_debug.h"
+
+#define POW2(x) ((x) * (x))
 
 /*****************************************************************************************/
 /* not smart at all, be careful                                                          */
@@ -33,9 +35,12 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
         return -2;
     }
     stdvar = get_stdvar(lcf->smart, weight);
-    thredshold = stdvar + lcf->smart->average;
+    thredshold = stdvar + POW2(lcf->smart->average) + 0.5;
     PRINT_INT("thredshold:", (int)thredshold);
-    if ((ngx_int_t)thredshold > weight) {
+    PRINT_INT("stdvar:", (int)stdvar);
+    PRINT_INT("aver:", (int)lcf->smart->average);
+    PRINT_INT("tail weight:", (int)lcf->smart->tail_weight);
+    if ((ngx_int_t)thredshold >= POW2(weight)) {
         /* it's a normal request */
         return 0;
     } else {
@@ -75,9 +80,9 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight){
     */
     float stdvar=smart->stdvar;
     float aver=smart->average;
-    aver = aver - (smart->tail_weight / RING_SIZE) + (weight / RING_SIZE);               /* this is SMA */
-    stdvar = stdvar + (pow((weight - aver), 2) -
-                       pow((smart->tail_weight - smart->average), 2)) / RING_SIZE;  /* recalculate stdvar roughly, not precise */
+    aver = aver - ((float)smart->tail_weight / RING_SIZE) + ((float)weight / RING_SIZE); /* this is SMA */
+    stdvar = stdvar + (POW2(weight - aver) -
+                       POW2(smart->tail_weight - smart->average)) / RING_SIZE;      /* recalculate stdvar roughly, not precise */
     smart->stdvar = stdvar;
     smart->average = aver;
     smart->hist_weight[smart->tail_pos] = weight;
