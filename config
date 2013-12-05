@@ -3,13 +3,15 @@ HTTP_MODULES="$HTTP_MODULES ngx_http_tidehunter_module"
 NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/src/ngx_http_tidehunter_module.c\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_parse.c\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_filter.c\
-                                $ngx_addon_dir/src/ngx_http_tidehunter_json.c"
+                                $ngx_addon_dir/src/ngx_http_tidehunter_json.c\
+                                $ngx_addon_dir/src/ngx_http_tidehunter_smart.c"
 
 NGX_ADDON_DEPS="$NGX_ADDON_DEPS $ngx_addon_dir/src/ngx_http_tidehunter_module.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_parse.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_common.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_filter.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_json.h\
-                                $ngx_addon_dir/src/ngx_http_tidehunter_debug.h"
+                                $ngx_addon_dir/src/ngx_http_tidehunter_debug.h\
+                                $ngx_addon_dir/src/ngx_http_tidehunter_smart.h"
 
-CORE_LIBS="$CORE_LIBS -ljansson"
+CORE_LIBS="$CORE_LIBS -ljansson -lm"

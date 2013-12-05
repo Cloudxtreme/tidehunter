@@ -44,6 +44,14 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t) * FT_BODY,
         NULL
     },
+    {
+        ngx_string("tidehunter_smart_init"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_http_tidehunter_smart_init,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        0,
+        NULL
+    },
     ngx_null_command
 };
 
@@ -84,21 +92,21 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
     /* compared to the order in which handlers are registered to REWRITE_PHASE.handlers */
     /************************************************************************************/
 
-    /* set the post handler for request body */
+    /* 3. set the post handler for request body */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
     }
     *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler_body_post;
 
-    /* set the handler for request body */
+    /* 2. set the handler for request body */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
     }
     *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler_body;
 
-    /* set the REWRITE handler */
+    /* 1. set the handler for request head */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers); /* why REWIRTE PHASE? */
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
@@ -121,6 +129,9 @@ static void* ngx_http_tidehunter_create_main_conf(ngx_conf_t *cf){
 static void* ngx_http_tidehunter_create_loc_conf(ngx_conf_t *cf){
     ngx_http_tidehunter_loc_conf_t *lcf;
     lcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_loc_conf_t));
+    if (lcf == NULL) {
+        return NULL;
+    }
     return lcf;
 }
 
@@ -133,7 +144,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         /* never filter on internal request */
         return (NGX_DECLINED);
     }
-    ngx_int_t filter_rv = 0;
+    ngx_int_t match_hit=0, weight=0;
     ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_QSTR];
     if (filter_rule_a != NULL) {
         ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
@@ -143,14 +154,17 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         } else {
             PRINT_INFO("start qstr filter");
             for(i=0; i < filter_rule_a->nelts; i++){
-                filter_rv += filter_rule[i].filter(req, &filter_rule[i].opt);
+                match_hit += filter_rule[i].filter(req, &filter_rule[i].opt);
+                weight += filter_rule[i].weight;
             }
         }
     }
-    if(filter_rv > 0){
-        PRINT_INT("MATCH HIT:", (int)filter_rv);
-        ngx_http_discard_request_body(req);
-        return (NGX_HTTP_BAD_REQUEST);
+    if(match_hit > 0){
+        PRINT_INT("MATCH HIT:", (int)match_hit);
+        if (ngx_http_tidehunter_smart_test(req, weight) != 0) {
+            ngx_http_discard_request_body(req);
+            return (NGX_HTTP_BAD_REQUEST);
+        }
     }
     return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
 }
