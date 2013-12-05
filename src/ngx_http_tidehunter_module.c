@@ -78,12 +78,18 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
     ngx_http_tidehunter_filter_init_rule(mcf, FT_QSTR, cf->pool);
     ngx_http_tidehunter_filter_init_rule(mcf, FT_BODY, cf->pool);
 
-    /* set the REWRITE handler */
-    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers); /* why REWIRTE PHASE? */
+
+    /************************************************************************************/
+    /* VERY IMPORTANT: the handlers in the same module are called in reversed order     */
+    /* compared to the order in which handlers are registered to REWRITE_PHASE.handlers */
+    /************************************************************************************/
+
+    /* set the post handler for request body */
+    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
     }
-    *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler;
+    *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler_body_post;
 
     /* set the handler for request body */
     rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
@@ -92,12 +98,12 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
     }
     *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler_body;
 
-    /* set the post handler for request body */
-    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers);
+    /* set the REWRITE handler */
+    rewrite_handler_pt = ngx_array_push(&ccf->phases[NGX_HTTP_REWRITE_PHASE].handlers); /* why REWIRTE PHASE? */
     if(rewrite_handler_pt == NULL){
         return NGX_ERROR;
     }
-    *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler_body_post;
+    *rewrite_handler_pt = ngx_http_tidehunter_rewrite_handler;
 
     PRINT_INFO("init done");
     return NGX_OK;
@@ -191,13 +197,16 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
     if (filter_rule_a != NULL) {
         ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
         ngx_uint_t i;
-        if (req->request_body->buf == NULL) {
+        ngx_http_request_body_t *rb = req->request_body;
+        if (rb == NULL) {
             /* whether req body is in buf, chain or tempfile, buf won't be NULL */
             PRINT_INFO("body length zero");
         } else {
             PRINT_INFO("start body filter");
             for(i=0; i < filter_rule_a->nelts; i++){
+                PRINT_NGXSTR("id:", filter_rule[i].id);
                 filter_rv += filter_rule[i].filter(req, &filter_rule[i].opt);
+                PRINT_INT("hit:", (int)filter_rv);
             }
         }
     }

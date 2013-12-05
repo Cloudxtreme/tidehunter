@@ -40,20 +40,50 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
     return match_hit;
 }
 
-/*
+
 ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
                                     ngx_http_tidehunter_filter_option_t *opt){
+    ngx_http_request_body_t *rb = req->request_body;
     // test whether rb is in BUFS, BUF, TEMP_FILE
+    PRINT_NGXSTR("content-type:", req->headers_in.content_type->value);
+    PRINT_INT("content-len:", (int)req->headers_in.content_length_n);
+    if (req->headers_in.content_length_n <=0) {
+        return 0;
+    }
     if (!rb->temp_file) {
         // request body is in the buf OR bufs chain
-        if (rb->bufs->next == NULL) {
+        if (rb->bufs != NULL) {
             // request body in buf
+            PRINT_INFO("body in chain bufs");
+            ngx_uint_t bufs_len=0;
+            ngx_chain_t* buf_next = rb->bufs;
+            do {
+                bufs_len += (buf_next->buf->last - buf_next->buf->pos);
+                buf_next = buf_next->next;
+            } while(buf_next != NULL);
+            ngx_str_t buf;
+            buf.len = bufs_len;
+            buf.data = (u_char*)malloc(bufs_len);
+            off_t offset=0;
+            buf_next = rb->bufs;
+            do {
+                ngx_memcpy(buf.data + offset, buf_next->buf->pos, buf_next->buf->last - buf_next->buf->pos);
+                offset += buf_next->buf->last - buf_next->buf->pos;
+                buf_next = buf_next->next;
+            } while(buf_next != NULL);
+            if (ngx_http_tidehunter_filter_match(&buf, opt) == 0) return 1;       /* match hit */
+            return 0;
+        } else {
+            PRINT_INFO("where is body?");
+            return 0;
         }
     } else {
         // request body is in a temp file.
+        PRINT_INFO("body in temp file");
+        return 0;
     }
 }
-*/
+
 
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_option_t *opt){
@@ -105,6 +135,6 @@ ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *
        whatever you want. a json rule loader in currently
        implemented by me. */
     filter_funcs[FT_QSTR] = ngx_http_tidehunter_filter_qstr;
-    // filter_funcs[FT_BODY] = ngx_http_tidehunter_filter_body;
+    filter_funcs[FT_BODY] = ngx_http_tidehunter_filter_body;
     return ngx_http_tidehunter_load_rule(mcf , filter_type, pool);
 }

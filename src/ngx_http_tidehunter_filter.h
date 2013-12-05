@@ -31,6 +31,9 @@ typedef struct{
 ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
                                           ngx_http_tidehunter_filter_option_t *opt);
 
+ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
+                                          ngx_http_tidehunter_filter_option_t *opt);
+
 ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
                                                ngx_http_tidehunter_filter_type_e filter_type,
                                                ngx_pool_t *pool);
