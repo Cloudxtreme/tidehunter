@@ -46,7 +46,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
     },
     {
         ngx_string("tidehunter_smart_init"),
-        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_http_tidehunter_smart_init,
         NGX_HTTP_LOC_CONF_OFFSET,
         0,
@@ -148,19 +148,23 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_QSTR];
     if (filter_rule_a != NULL) {
         ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
-        ngx_uint_t i;
+        ngx_uint_t i, tmp;
         if (req->args.len == 0) {
             PRINT_INFO("args length zero");
         } else {
             PRINT_INFO("start qstr filter");
             for(i=0; i < filter_rule_a->nelts; i++){
-                match_hit += filter_rule[i].filter(req, &filter_rule[i].opt);
-                weight += filter_rule[i].weight;
+                tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
+                if (tmp != 0) {
+                    weight += filter_rule[i].weight;
+                    match_hit += tmp;
+                }
             }
         }
     }
     if(match_hit > 0){
         PRINT_INT("MATCH HIT:", (int)match_hit);
+        PRINT_INT("MATCH WEIGHT:", (int)weight);
         if (ngx_http_tidehunter_smart_test(req, weight) != 0) {
             ngx_http_discard_request_body(req);
             return (NGX_HTTP_BAD_REQUEST);

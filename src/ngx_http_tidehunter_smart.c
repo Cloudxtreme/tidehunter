@@ -3,6 +3,8 @@
 #include "ngx_http_tidehunter_smart.h"
 #include "ngx_http_tidehunter_module.h"
 
+#include "ngx_http_tidehunter_debug.h"
+
 /*****************************************************************************************/
 /* not smart at all, be careful                                                          */
 /*                                                                                       */
@@ -23,23 +25,30 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight);
 
 ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weight){
     extern ngx_module_t ngx_http_tidehunter_module;
-    ngx_http_tidehunter_loc_conf_t *lcf = ngx_http_conf_get_module_loc_conf(req, ngx_http_tidehunter_module);
+    ngx_http_tidehunter_loc_conf_t *lcf = ngx_http_get_module_loc_conf(req, ngx_http_tidehunter_module);
     float stdvar;
-    float threadshold;
+    float thredshold;
+    if (lcf->smart == NULL) {
+        /* not init smart */
+        return -2;
+    }
     stdvar = get_stdvar(lcf->smart, weight);
     thredshold = stdvar + lcf->smart->average;
+    PRINT_INT("thredshold:", (int)thredshold);
     if ((ngx_int_t)thredshold > weight) {
         /* it's a normal request */
         return 0;
     } else {
         /* abnormal request */
+        PRINT_INFO("abnormal request");
         return -1;
     }
 }
 
 char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
-    ngx_int_t *value = cf->args->elts; /* the initial threadshold */
-    float threadshold = value[0];
+    ngx_str_t *value = cf->args->elts; /* the initial threadshold */
+    ngx_int_t thredshold = ngx_atoi(value[1].data, value[1].len);
+    PRINT_INT("init thredshold:", (int)thredshold);
     ngx_http_tidehunter_loc_conf_t *lcf = conf;
     lcf->smart = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_smart_t));
     if (lcf->smart == NULL) {
@@ -47,7 +56,7 @@ char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *c
     }
     ngx_int_t i;
     for(i=0; i < RING_SIZE; i++){
-        lcf->smart->hist_weight[i] = threadshold;
+        lcf->smart->hist_weight[i] = thredshold;
     }
     lcf->smart->average = thredshold;
     lcf->smart->stdvar = 0;
