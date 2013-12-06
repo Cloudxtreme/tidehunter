@@ -14,4 +14,4 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS $ngx_addon_dir/src/ngx_http_tidehunter_module.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_debug.h\
                                 $ngx_addon_dir/src/ngx_http_tidehunter_smart.h"
 
-CORE_LIBS="$CORE_LIBS -ljansson -lm"
+CORE_LIBS="$CORE_LIBS -ljansson"

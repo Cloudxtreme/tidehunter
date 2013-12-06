@@ -1,4 +1,4 @@
-//#include <math.h>
+//#include <math.h>   //no need now
 
 #include "ngx_http_tidehunter_smart.h"
 #include "ngx_http_tidehunter_module.h"
@@ -6,6 +6,7 @@
 #include "ngx_http_tidehunter_debug.h"
 
 #define POW2(x) ((x) * (x))
+#define ABS(x) ( (x) > 0 ? (x) : -(x) )
 
 /*****************************************************************************************/
 /* not smart at all, be careful                                                          */
@@ -24,6 +25,7 @@
 
 
 static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight);
+static float Q_rsqrt( float number );
 
 ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weight){
     extern ngx_module_t ngx_http_tidehunter_module;
@@ -35,12 +37,17 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
         return -2;
     }
     stdvar = get_stdvar(lcf->smart, weight);
-    thredshold = stdvar + POW2(lcf->smart->average) + 0.5;
-    PRINT_INT("thredshold:", (int)thredshold);
-    PRINT_INT("stdvar:", (int)stdvar);
+    if (stdvar <= 1e-4) {
+        thredshold = lcf->smart->average;
+    } else {
+        /* the `0.5' is for ceil-ing the thredshold then convert to ngx_int_t */
+        thredshold = ABS(1/Q_rsqrt(stdvar)) + lcf->smart->average;
+    }
+    PRINT_FLOAT("thredshold:", thredshold);
+    PRINT_FLOAT("stdvar:", stdvar);
     PRINT_INT("aver:", (int)lcf->smart->average);
     PRINT_INT("tail weight:", (int)lcf->smart->tail_weight);
-    if ((ngx_int_t)thredshold >= POW2(weight)) {
+    if (thredshold >= weight) {
         /* it's a normal request */
         return 0;
     } else {
@@ -51,8 +58,8 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
 }
 
 char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
-    ngx_str_t *value = cf->args->elts; /* the initial threadshold */
-    ngx_int_t thredshold = ngx_atoi(value[1].data, value[1].len);
+    ngx_str_t *value = cf->args->elts;
+    ngx_int_t thredshold = ngx_atoi(value[1].data, value[1].len); /* the initial threadshold */
     PRINT_INT("init thredshold:", (int)thredshold);
     ngx_http_tidehunter_loc_conf_t *lcf = conf;
     lcf->smart = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_smart_t));
@@ -77,16 +84,33 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight){
       and a new weight. that is how SMA works.
       a tail_weight in hist_weight is removed, the new weight is put in there,
       and tail_pos move one step forward.
+
+      NOTE: as it's a approx approach to calculating stdvar.
     */
     float stdvar=smart->stdvar;
     float aver=smart->average;
     aver = aver - ((float)smart->tail_weight / RING_SIZE) + ((float)weight / RING_SIZE); /* this is SMA */
     stdvar = stdvar + (POW2(weight - aver) -
-                       POW2(smart->tail_weight - smart->average)) / RING_SIZE;      /* recalculate stdvar roughly, not precise */
+                       POW2(smart->tail_weight - smart->average)) / RING_SIZE;           /* recalculate stdvar roughly, not precise */
     smart->stdvar = stdvar;
     smart->average = aver;
     smart->hist_weight[smart->tail_pos] = weight;
     smart->tail_pos = (smart->tail_pos + 1) % RING_SIZE;                                 /* this is how ring ptr move */
     smart->tail_weight = smart->hist_weight[smart->tail_pos];
     return stdvar;
+}
+
+static float Q_rsqrt( float number ) {
+    /* the magic fast sqrt function from Quake 3*/
+    long i;
+    float x2, y;
+    const float threehalfs = 1.5F;
+    x2 = number * 0.5F;
+    y  = number;
+    i  = * ( long * ) &y;                       // evil floating point bit level hacking
+    i  = 0x5f3759df - ( i >> 1 );               // what the fuck?
+    y  = * ( float * ) &i;
+    y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
+    //y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+    return y;
 }

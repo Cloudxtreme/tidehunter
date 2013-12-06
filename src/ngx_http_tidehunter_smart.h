@@ -1,7 +1,7 @@
 #pragma once
 #include "ngx_http_tidehunter_common.h"
 
-#define RING_SIZE 10
+#define RING_SIZE 1000
 
 typedef struct{
     ngx_int_t hist_weight[RING_SIZE];   /* this array is a ring, the tail_pos always point to the tail */
