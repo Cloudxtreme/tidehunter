@@ -14,3 +14,10 @@ NOTE:
 * and the ngx_str_t is DESIGNED to use ngx_str_t.len to test the EOS right?
   so I didn't put `\0' when not need, but pcre_compile need a '\0'.
   refer to json's jsonstr2ngxstr function please. sorry I mess up.
+
+* seems that I cann't compiled on i686 debian wheezy(20131209), the request_t pass
+  to the rewirte handler is wrong! I print the req address in rewrite_phase checker
+  and my handler, they are different.
+  BUG description:
+    inside the rewrite handler, the req->uri is actually point to `request line` member
+    of the request_t. very strange. I cann't figure out why.

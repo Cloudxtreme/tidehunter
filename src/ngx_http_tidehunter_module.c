@@ -157,6 +157,8 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
             PRINT_INFO("args length zero");
         } else {
             PRINT_INFO("start qstr filter");
+            PRINT_NGXSTR("====req uri:", req->uri);
+            PRINT_NGXSTR("====req args:", req->args);
             for(i=0; i < filter_rule_a->nelts; i++){
                 tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
                 if (tmp != 0) {
