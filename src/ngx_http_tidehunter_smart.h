@@ -11,6 +11,10 @@ typedef struct{
     float     average;
 } ngx_http_tidehunter_smart_t;
 
+#define SMART_NOTINIT  -2
+#define SMART_NORMAL   0
+#define SMART_ABNORMAL -1
+
 
 char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weight);

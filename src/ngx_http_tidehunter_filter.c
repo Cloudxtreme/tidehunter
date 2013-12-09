@@ -45,8 +45,6 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
                                     ngx_http_tidehunter_filter_option_t *opt){
     ngx_http_request_body_t *rb = req->request_body;
     // test whether rb is in BUFS, BUF, TEMP_FILE
-    PRINT_NGXSTR("content-type:", req->headers_in.content_type->value);
-    PRINT_INT("content-len:", (int)req->headers_in.content_length_n);
     if (req->headers_in.content_length_n <=0) {
         return 0;
     }
@@ -54,7 +52,6 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
         // request body is in the buf OR bufs chain
         if (rb->bufs != NULL) {
             // request body in buf
-            PRINT_INFO("body in chain bufs");
             ngx_uint_t bufs_len=0;
             ngx_chain_t* buf_next = rb->bufs;
             do {

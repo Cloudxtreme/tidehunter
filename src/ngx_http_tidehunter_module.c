@@ -1,6 +1,7 @@
 #include "ngx_http_tidehunter_module.h"
 #include "ngx_http_tidehunter_parse.h"
 #include "ngx_http_tidehunter_filter.h"
+#include "ngx_http_tidehunter_smart.h"
 
 #include "ngx_http_tidehunter_debug.h"
 
@@ -157,11 +158,9 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
             PRINT_INFO("args length zero");
         } else {
             PRINT_INFO("start qstr filter");
-            PRINT_NGXSTR("====req uri:", req->uri);
-            PRINT_NGXSTR("====req args:", req->args);
             for(i=0; i < filter_rule_a->nelts; i++){
                 tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
-                if (tmp != 0) {
+                if (tmp > 0) {
                     weight += filter_rule[i].weight;
                     match_hit += tmp;
                 }
@@ -171,7 +170,10 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     if(match_hit > 0){
         PRINT_INT("MATCH HIT:", (int)match_hit);
         PRINT_INT("MATCH WEIGHT:", (int)weight);
-        if (ngx_http_tidehunter_smart_test(req, weight) != 0) {
+        ngx_int_t smart_rv;
+        smart_rv = ngx_http_tidehunter_smart_test(req, weight);
+        if (smart_rv != SMART_NORMAL){
+            /* whether smart is NOTINIT or return ABNORMAL, deny req */
             ngx_http_discard_request_body(req);
             return (NGX_HTTP_BAD_REQUEST);
         }
@@ -216,11 +218,11 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
     if(mcf == NULL){
         return (NGX_DECLINED);
     }
-    ngx_int_t filter_rv = 0;
+    ngx_int_t match_hit=0, weight=0;
     ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_BODY];
     if (filter_rule_a != NULL) {
         ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
-        ngx_uint_t i;
+        ngx_uint_t i, tmp;
         ngx_http_request_body_t *rb = req->request_body;
         if (rb == NULL) {
             /* whether req body is in buf, chain or tempfile, buf won't be NULL */
@@ -228,18 +230,24 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
         } else {
             PRINT_INFO("start body filter");
             for(i=0; i < filter_rule_a->nelts; i++){
-                PRINT_NGXSTR("id:", filter_rule[i].id);
-                filter_rv += filter_rule[i].filter(req, &filter_rule[i].opt);
-                PRINT_INT("hit:", (int)filter_rv);
+                tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
+                if (tmp > 0) {
+                    match_hit += tmp;
+                    weight += filter_rule[i].weight;
+                }
             }
         }
     }
-    if(filter_rv > 0){
-        PRINT_INT("MATCH HIT:", (int)filter_rv);
-        ngx_http_discard_request_body(req);
-        return (NGX_HTTP_BAD_REQUEST);
+    if(match_hit > 0){
+        PRINT_INT("MATCH HIT:", (int)match_hit);
+        ngx_int_t smart_rv;
+        smart_rv = ngx_http_tidehunter_smart_test(req, weight);
+        if (smart_rv != SMART_NORMAL){
+            /* whether smart is NOTINIT or return ABNORMAL, deny req */
+            ngx_http_discard_request_body(req);
+            return (NGX_HTTP_BAD_REQUEST);
+        }
     }
-
     return (NGX_DECLINED);
 }
 

@@ -34,7 +34,7 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
     float thredshold;
     if (lcf->smart == NULL) {
         /* not init smart */
-        return -2;
+        return SMART_NOTINIT;
     }
     stdvar = get_stdvar(lcf->smart, weight);
     if (stdvar <= 1e-4) {
@@ -49,11 +49,11 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
     PRINT_INT("tail weight:", (int)lcf->smart->tail_weight);
     if (thredshold >= weight) {
         /* it's a normal request */
-        return 0;
+        return SMART_NORMAL;
     } else {
         /* abnormal request */
         PRINT_INFO("abnormal request");
-        return -1;
+        return SMART_ABNORMAL;
     }
 }
 
