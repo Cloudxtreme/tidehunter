@@ -149,26 +149,12 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         /* never filter on internal request */
         return (NGX_DECLINED);
     }
-    ngx_int_t match_hit=0, weight=0;
+    ngx_int_t weight=0;
     ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_QSTR];
     if (filter_rule_a != NULL) {
-        ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
-        ngx_uint_t i, tmp;
-        if (req->args.len == 0) {
-            PRINT_INFO("args length zero");
-        } else {
-            PRINT_INFO("start qstr filter");
-            for(i=0; i < filter_rule_a->nelts; i++){
-                tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
-                if (tmp > 0) {
-                    weight += filter_rule[i].weight;
-                    match_hit += tmp;
-                }
-            }
-        }
+        weight += ngx_http_tidehunter_filter_qstr(req, filter_rule_a);
     }
-    if(match_hit > 0){
-        PRINT_INT("MATCH HIT:", (int)match_hit);
+    if(weight >= 0){
         PRINT_INT("MATCH WEIGHT:", (int)weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
@@ -218,28 +204,20 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
     if(mcf == NULL){
         return (NGX_DECLINED);
     }
-    ngx_int_t match_hit=0, weight=0;
+    ngx_int_t weight=0;
     ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_BODY];
     if (filter_rule_a != NULL) {
-        ngx_http_tidehunter_filter_rule_t *filter_rule = filter_rule_a->elts;
-        ngx_uint_t i, tmp;
         ngx_http_request_body_t *rb = req->request_body;
         if (rb == NULL) {
             /* whether req body is in buf, chain or tempfile, buf won't be NULL */
             PRINT_INFO("body length zero");
         } else {
             PRINT_INFO("start body filter");
-            for(i=0; i < filter_rule_a->nelts; i++){
-                tmp = filter_rule[i].filter(req, &filter_rule[i].opt);
-                if (tmp > 0) {
-                    match_hit += tmp;
-                    weight += filter_rule[i].weight;
-                }
-            }
+            weight = ngx_http_tidehunter_filter_body(req, filter_rule_a);
         }
     }
-    if(match_hit > 0){
-        PRINT_INT("MATCH HIT:", (int)match_hit);
+    if(weight >= 0){
+        PRINT_INT("MATCH WEIGHT:", (int)weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
         if (smart_rv != SMART_NORMAL){

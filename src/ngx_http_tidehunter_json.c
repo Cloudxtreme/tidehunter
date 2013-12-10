@@ -20,7 +20,6 @@ static int fill_filter_rule(json_t* rule_json_obj,
 
 static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
 
-extern filter_func_ptr_t filter_funcs[FT_TOTAL];
 
 int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
                                   ngx_http_tidehunter_filter_type_e filter_type,
@@ -90,7 +89,6 @@ static int fill_filter_rule(json_t* rule_json_obj,
     jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
     jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
     rule->weight = JSON_GET_INT(rule_json_obj, "weight");
-    rule->filter = filter_funcs[filter_type];
     json_t *opt_json_obj = json_object_get(rule_json_obj, "opt");
 
 #ifdef RS_DEBUG
