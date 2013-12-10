@@ -41,7 +41,8 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
         return SMART_NOTINIT;
     }
     stdvar = get_stdvar(lcf->smart, weight);
-    if (stdvar <= 1e-4) {
+    if (stdvar <= 1e-3) {
+        /* here may need some math? `stdvar <= 1/N' is better?*/
         thredshold = lcf->smart->average;
     } else {
         /* the `0.5' is for ceil-ing the thredshold then convert to ngx_int_t */

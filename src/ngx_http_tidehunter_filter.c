@@ -114,36 +114,35 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
       @param in: opt       : contains match pattern
       @return: `0' == NOT match. `1' == match
     */
-    ngx_http_tidehunter_filter_option_t *opt = &rule->opt;
     if (i_target_s->len == 0) {
         /* empty string */
         return 0;
     }
-    if (opt->exact_str.len > i_target_s->len) {
+    if (rule->exact_str.len > i_target_s->len) {
         /* target string is shorter than match str, quit with NOT match */
         return 0;
     }
-    if (opt->match_opt == MO_EXACT_MATCH) {
-        if (opt->exact_str.len == 0) {
+    if (rule->match_opt == MO_EXACT_MATCH) {
+        if (rule->exact_str.len == 0) {
             return 0;
         }
-        if (ngx_strncmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len) == 0) {
+        if (ngx_strncmp(i_target_s->data, rule->exact_str.data, rule->exact_str.len) == 0) {
             return 1;
         }
-    } else if (opt->match_opt == MO_EXACT_MATCH_IGNORE_CASE) {
-        if (opt->exact_str.len == 0) {
+    } else if (rule->match_opt == MO_EXACT_MATCH_IGNORE_CASE) {
+        if (rule->exact_str.len == 0) {
             return 0;
         }
-        if (ngx_strncasecmp(i_target_s->data, opt->exact_str.data, opt->exact_str.len) == 0){
+        if (ngx_strncasecmp(i_target_s->data, rule->exact_str.data, rule->exact_str.len) == 0){
             return 1;
         }
-    } else if (opt->match_opt == MO_REG_MATCH){
+    } else if (rule->match_opt == MO_REG_MATCH){
 #if (NGX_PCRE)
         int capture[3];         /* a multlple of 3, require by pcre */
-        if (opt->compile_regex == NULL) {
+        if (rule->compile_regex == NULL) {
             return 0;
         }
-        ngx_regex_exec(opt->compile_regex->regex, i_target_s, capture, 3);
+        ngx_regex_exec(rule->compile_regex->regex, i_target_s, capture, 3);
         if (capture[0] > -1) {
             return 1;
         }

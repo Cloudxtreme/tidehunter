@@ -15,7 +15,6 @@
 
 static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
-                            ngx_http_tidehunter_filter_type_e filter_type,
                             ngx_pool_t *pool);
 
 static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
@@ -29,14 +28,12 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
 
       json format:
       [ {
-          "msg": "xxx",             string
-          "id" : "xxx",             string
-          "weight": xxx,            int
-          "opt": {
-              "match_opt":  xxx,    int
-              "exact_str": "xxx",   string
-              "regex_str": "xxx",   string
-          }
+          "msg": "xxx",         string
+          "id" : "xxx",         string
+          "weight": xxx,        int
+          "match_opt":  xxx,    int
+          "exact_str": "xxx",   string
+          "regex_str": "xxx",   string
         }, .. ]        object
     */
     PRINT_NGXSTR("rule name:", mcf->rulefile[filter_type]);
@@ -69,7 +66,7 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
             return -3;
         }
         ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(rule_a);
-        fill_filter_rule(rule_json_obj, rule, filter_type, pool);
+        fill_filter_rule(rule_json_obj, rule, pool);
     }
     mcf->filter_rule_a[filter_type] = rule_a;
     PRINT_INFO("rule loaded");
@@ -78,57 +75,52 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
 
 static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
-                            ngx_http_tidehunter_filter_type_e filter_type,
                             ngx_pool_t *pool){
     /*
       @return: 0 == success
       fill the filter_rule_t with json data
     */
-    u_char errstr[NGX_MAX_CONF_ERRSTR];
-
-    jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
-    jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
-    rule->weight = JSON_GET_INT(rule_json_obj, "weight");
-    json_t *opt_json_obj = json_object_get(rule_json_obj, "opt");
 
 #ifdef RS_DEBUG
     JSON_DBG_STR(rule_json_obj, "msg");
     JSON_DBG_STR(rule_json_obj, "id");
     JSON_DBG_INT(rule_json_obj, "weight");
-    if (json_is_object(opt_json_obj)) {
-        JSON_DBG_INT(opt_json_obj, "match_opt");
-        JSON_DBG_STR(opt_json_obj, "exact_str");
-        JSON_DBG_STR(opt_json_obj, "regex_str");
-    }
+    JSON_DBG_INT(rule_json_obj, "match_opt");
+    JSON_DBG_STR(rule_json_obj, "exact_str");
+    JSON_DBG_STR(rule_json_obj, "regex_str");
 #endif
 
-    if (json_is_object(opt_json_obj)) {
-        rule->opt.match_opt = JSON_GET_INT(opt_json_obj, "match_opt");
-        if(rule->opt.match_opt == MO_REG_MATCH){
-            ngx_regex_compile_t *rc = ngx_pcalloc(pool, sizeof(ngx_regex_compile_t));
-            if (jsonstr2ngxstr(json_object_get(opt_json_obj, "regex_str"), &rc->pattern, pool) != 0){
-                MESSAGE("NOT regex_str found");
-                JSON_DBG_STR(rule_json_obj, "id");
-                return -1;
-            }
-            rc->options = NGX_REGEX_CASELESS;
-            rc->pool = pool;
-            rc->err.len = NGX_MAX_CONF_ERRSTR;
-            rc->err.data = errstr; /* the errstr is on the stack */
-            if(ngx_regex_compile(rc) != NGX_OK){
-                MESSAGE("regex compile fail");
-                JSON_DBG_STR(rule_json_obj, "id");
-                PRINT_NGXSTR("err", rc->err);
-                return -2;
-            }
-            rule->opt.compile_regex = rc;
-        } else {
-            /* MO_EXACT_MATCH || MO_EXACT_MATCH_IGNORE_CASE */
-            if (jsonstr2ngxstr(json_object_get(opt_json_obj, "exact_str"), &rule->opt.exact_str, pool) != 0){
-                MESSAGE("NOT exact_str found\n");
-                rule->opt.exact_str.len = 0; /* make sure exact_str is zero length */
-                return -3;
-            }
+    u_char errstr[NGX_MAX_CONF_ERRSTR];
+
+    jsonstr2ngxstr(json_object_get(rule_json_obj, "msg"), &rule->msg, pool);
+    jsonstr2ngxstr(json_object_get(rule_json_obj, "id"), &rule->id, pool);
+    rule->weight = JSON_GET_INT(rule_json_obj, "weight");
+
+    rule->match_opt = JSON_GET_INT(rule_json_obj, "match_opt");
+    if(rule->match_opt == MO_REG_MATCH){
+        ngx_regex_compile_t *rc = ngx_pcalloc(pool, sizeof(ngx_regex_compile_t));
+        if (jsonstr2ngxstr(json_object_get(rule_json_obj, "regex_str"), &rc->pattern, pool) != 0){
+            MESSAGE("NOT regex_str found");
+            JSON_DBG_STR(rule_json_obj, "id");
+            return -1;
+        }
+        rc->options = NGX_REGEX_CASELESS;
+        rc->pool = pool;
+        rc->err.len = NGX_MAX_CONF_ERRSTR;
+        rc->err.data = errstr; /* the errstr is on the stack */
+        if(ngx_regex_compile(rc) != NGX_OK){
+            MESSAGE("regex compile fail");
+            JSON_DBG_STR(rule_json_obj, "id");
+            PRINT_NGXSTR("err", rc->err);
+            return -2;
+        }
+        rule->compile_regex = rc;
+    } else {
+        /* MO_EXACT_MATCH || MO_EXACT_MATCH_IGNORE_CASE */
+        if (jsonstr2ngxstr(json_object_get(rule_json_obj, "exact_str"), &rule->exact_str, pool) != 0){
+            MESSAGE("NOT exact_str found\n");
+            rule->exact_str.len = 0; /* make sure exact_str is zero length */
+            return -3;
         }
     }
 

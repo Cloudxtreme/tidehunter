@@ -5,18 +5,13 @@
 
 
 typedef struct{
-    /* option for filter func ptr */
-    ngx_http_tidehunter_match_option_e match_opt;
-    ngx_str_t exact_str;
-    ngx_regex_compile_t *compile_regex;
-} ngx_http_tidehunter_filter_option_t;
-
-
-typedef struct{
     ngx_str_t msg;
     ngx_str_t id;
     ngx_int_t weight;
-    ngx_http_tidehunter_filter_option_t opt;
+    /* option for string match: exact or regex. */
+    ngx_http_tidehunter_match_option_e match_opt;
+    ngx_str_t exact_str;
+    ngx_regex_compile_t *compile_regex;
 } ngx_http_tidehunter_filter_rule_t;
 
 
