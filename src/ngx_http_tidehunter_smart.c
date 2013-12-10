@@ -28,6 +28,10 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight);
 static float Q_rsqrt( float number );
 
 ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weight){
+    /*
+      @return: SMART_NORMAL / ABNORMAL / NOTINIT
+      use the `smart' method to test whether this request is normal or not.
+     */
     extern ngx_module_t ngx_http_tidehunter_module;
     ngx_http_tidehunter_loc_conf_t *lcf = ngx_http_get_module_loc_conf(req, ngx_http_tidehunter_module);
     float stdvar;
@@ -58,6 +62,11 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
 }
 
 char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf){
+    /*
+      directive command function.
+      set up initial thredshold, spread this thredshold to all the `smart ring' and
+      set the smart average=thredshold, stdvar=0.
+     */
     ngx_str_t *value = cf->args->elts;
     ngx_int_t thredshold = ngx_atoi(value[1].data, value[1].len); /* the initial threadshold */
     PRINT_INT("init thredshold:", (int)thredshold);

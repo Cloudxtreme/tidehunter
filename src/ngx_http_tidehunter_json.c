@@ -32,7 +32,6 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
           "msg": "xxx",             string
           "id" : "xxx",             string
           "weight": xxx,            int
-          "filter": filter type,    int
           "opt": {
               "match_opt":  xxx,    int
               "exact_str": "xxx",   string
@@ -83,6 +82,7 @@ static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_pool_t *pool){
     /*
       @return: 0 == success
+      fill the filter_rule_t with json data
     */
     u_char errstr[NGX_MAX_CONF_ERRSTR];
 

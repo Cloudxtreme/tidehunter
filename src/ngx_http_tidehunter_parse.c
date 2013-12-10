@@ -1,6 +1,8 @@
-/* functions for parsing query string. including,
+/*
+  functions for parsing query string. including,
    - split query string to key/value pair
-   - unescape query string */
+   - unescape query string
+*/
 
 #include "ngx_http_tidehunter_parse.h"
 #include "ngx_http_tidehunter_debug.h"
@@ -12,7 +14,7 @@ void ngx_http_tidehunter_parse_qstr(ngx_http_request_t *req, ngx_str_t *i_qstr_s
     /*
       parse the query string
       @param in:  i_qstr_s: query string `a=1&b=2'
-      @param out: o_qstr_dict_a: tokenize query string name/value pairs
+      @param out: o_qstr_dict_a: tokenized query string name/value pairs `{a:1, b:2}'
 
       `ab=123&bc=245'
        i    j
@@ -82,8 +84,10 @@ static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qs
 }
 
 void ngx_http_tidehunter_unescape_args(ngx_http_request_t *req, ngx_str_t *dst, ngx_str_t *src){
-    /* unescape string will only be shorter */
-    u_char *buf = ngx_pcalloc(req->pool, src->len);
+    /*
+      unescape query string before I can do the filter.
+    */
+    u_char *buf = ngx_pcalloc(req->pool, src->len);  /* unescape string will only be shorter */
     u_char *const buf_start = buf;                   /* save the start point of buf */
     u_char *const src_start = src->data;             /* save the start point of req->args */
 

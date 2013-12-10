@@ -46,11 +46,19 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         NULL
     },
     {
-        ngx_string("tidehunter_smart_init"),
+        ngx_string("tidehunter_smart_thredshold"),
         NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_http_tidehunter_smart_init,
         NGX_HTTP_LOC_CONF_OFFSET,
-        0,
+        offsetof(ngx_http_tidehunter_loc_conf_t, smart),
+        NULL
+    },
+    {
+        ngx_string("tidehunter_static_thredshold"),
+        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_tidehunter_loc_conf_t, static_thredshold),
         NULL
     },
     ngx_null_command
@@ -142,7 +150,8 @@ static void* ngx_http_tidehunter_create_loc_conf(ngx_conf_t *cf){
 
 static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_http_tidehunter_main_conf_t *mcf = ngx_http_get_module_main_conf(req, ngx_http_tidehunter_module);
-    if(mcf == NULL){
+    ngx_http_tidehunter_loc_conf_t *lcf = ngx_http_get_module_loc_conf(req, ngx_http_tidehunter_module);
+    if(mcf == NULL || lcf == NULL){
         return (NGX_DECLINED);
     }
     if(req->internal == 1){
@@ -158,10 +167,15 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         PRINT_INT("MATCH WEIGHT:", (int)weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
-        if (smart_rv != SMART_NORMAL){
+        if (smart_rv == SMART_ABNORMAL){
             /* whether smart is NOTINIT or return ABNORMAL, deny req */
             ngx_http_discard_request_body(req);
             return (NGX_HTTP_BAD_REQUEST);
+        } else if (smart_rv == SMART_NOTINIT) {
+            if (weight > lcf->static_thredshold) {
+                /* NOT smart init, use static thredshold. deny req */
+                return (NGX_HTTP_BAD_REQUEST);
+            }
         }
     }
     return (NGX_DECLINED);        /* goto next handler in REWRITE PHASE */
@@ -201,7 +215,8 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
     }
 
     ngx_http_tidehunter_main_conf_t *mcf = ngx_http_get_module_main_conf(req, ngx_http_tidehunter_module);
-    if(mcf == NULL){
+    ngx_http_tidehunter_loc_conf_t *lcf = ngx_http_get_module_loc_conf(req, ngx_http_tidehunter_module);
+    if(mcf == NULL || lcf == NULL){
         return (NGX_DECLINED);
     }
     ngx_int_t weight=0;
@@ -220,10 +235,15 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
         PRINT_INT("MATCH WEIGHT:", (int)weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
-        if (smart_rv != SMART_NORMAL){
+        if (smart_rv == SMART_ABNORMAL){
             /* whether smart is NOTINIT or return ABNORMAL, deny req */
             ngx_http_discard_request_body(req);
             return (NGX_HTTP_BAD_REQUEST);
+        } else if (smart_rv == SMART_NOTINIT) {
+            if (weight > lcf->static_thredshold) {
+                /* NOT smart init, use static thredshold. deny req */
+                return (NGX_HTTP_BAD_REQUEST);
+            }
         }
     }
     return (NGX_DECLINED);
@@ -231,5 +251,9 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
 
 static void ngx_http_tidehunter_req_body_callback(ngx_http_request_t *req){
     req->phase_handler++;       /* set phase_handler to tidehunter_rewrite_handler_body_post */
+#if defined(nginx_version) && nginx_version >= 8011
+    /* read_client_request_body always increments the counter */
+    req->main->count--;
+#endif
     ngx_http_core_run_phases(req);
 }

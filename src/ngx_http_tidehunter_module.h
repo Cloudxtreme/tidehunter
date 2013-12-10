@@ -12,4 +12,5 @@ typedef struct{
 
 typedef struct{
     ngx_http_tidehunter_smart_t *smart;
+    ngx_int_t static_thredshold;
 } ngx_http_tidehunter_loc_conf_t;

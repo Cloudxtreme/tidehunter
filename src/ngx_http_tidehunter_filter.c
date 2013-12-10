@@ -17,6 +17,10 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
       @param in: opt: filter rule array
       @return: match weight
     */
+    /*
+      TODO: do we need utf8 supported in query string while filtering dangerous keyword?
+            currently the rules I copy from naxsi give no care about anything except ascii.
+    */
     ngx_array_t *qstr_dict_a = ngx_array_create(req->pool, 2, sizeof(qstr_dict_t));
     if (qstr_dict_a == NULL) {
         LOG_ERR("tidehunter_filter_qstr array init failed", req->connection->log);
@@ -24,7 +28,7 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
     }
     ngx_str_t unescape_args;
     ngx_http_tidehunter_unescape_args(req, &unescape_args, &req->args);
-    ngx_http_tidehunter_parse_qstr(req, &unescape_args, qstr_dict_a); /* FIXME: should NOT parse for every rule */
+    ngx_http_tidehunter_parse_qstr(req, &unescape_args, qstr_dict_a);
     qstr_dict_t *qstr_dict = qstr_dict_a->elts;
     ngx_int_t weight = 0;
     ngx_uint_t i, j;
@@ -45,6 +49,17 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
 
 ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
                                           ngx_array_t *rule_a){
+    /*
+      filter for the request body
+      @param in: req: http request
+      @param in: opt: filter rule array
+      @return: match weight
+    */
+    /*
+      TODO: actually this is very far from good.
+        - test the content-type so to determine how to decode the body
+        - currently big body(in tempfile) is ignored.
+    */
     ngx_http_request_body_t *rb = req->request_body;
     // test whether rb is in BUFS, BUF, TEMP_FILE
     if (req->headers_in.content_length_n <=0) {
@@ -84,7 +99,7 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
             return 0;
         }
     } else {
-        // request body is in a temp file.
+        // request body is in a temp file. FIXME: to deal with big file?
         PRINT_INFO("body in temp file");
         return 0;
     }
@@ -94,9 +109,10 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_rule_t *rule){
     /*
+      the basic function for filter.
       @param in: i_target_s: ngx_str_t to be match
       @param in: opt       : contains match pattern
-      @return: `0' == NOT match. `1' == NOT match
+      @return: `0' == NOT match. `1' == match
     */
     ngx_http_tidehunter_filter_option_t *opt = &rule->opt;
     if (i_target_s->len == 0) {
@@ -145,10 +161,11 @@ ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *
                                                ngx_pool_t *pool){
     /*
       @return: 0 == success
+
+      load_rule implementation is independent, json, yaml
+      whatever you want. a json rule loader is currently
+      implemented by me.
     */
-    /* load_rule implementation is independent, json, yaml
-       whatever you want. a json rule loader in currently
-       implemented by me. */
     if (mcf->rulefile[filter_type].len == 0){
         /* no loadrule directive for this filter_type */
         return -1;
