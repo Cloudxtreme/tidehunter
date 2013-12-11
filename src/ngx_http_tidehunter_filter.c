@@ -27,7 +27,7 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
         return 0;
     }
     ngx_str_t unescape_args;
-    ngx_http_tidehunter_unescape_args(req, &unescape_args, &req->args);
+    ngx_http_tidehunter_unescape_uri(req, &unescape_args, &req->args);
     ngx_http_tidehunter_parse_qstr(req, &unescape_args, qstr_dict_a);
     qstr_dict_t *qstr_dict = qstr_dict_a->elts;
     ngx_int_t weight = 0;
@@ -69,27 +69,42 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
         // request body is in the buf OR bufs chain
         if (rb->bufs != NULL) {
             // request body in buf
-            ngx_uint_t bufs_len=0;
-            ngx_chain_t* buf_next = rb->bufs;
-            do {
-                bufs_len += (buf_next->buf->last - buf_next->buf->pos);
-                buf_next = buf_next->next;
-            } while(buf_next != NULL);
-            ngx_str_t buf;
-            buf.len = bufs_len;
-            buf.data = (u_char*)malloc(bufs_len);
+            ngx_str_t orig_ctn, unescaped_ctn;
+            orig_ctn.len = req->headers_in.content_length_n; /* WHY: content_length_n is of type `off_t' */
+            orig_ctn.data = ngx_palloc(req->pool, orig_ctn.len); /* alloc, but not clean needed. */
             off_t offset=0;
+            ngx_chain_t *buf_next;
             buf_next = rb->bufs;
-            do {
-                ngx_memcpy(buf.data + offset, buf_next->buf->pos, buf_next->buf->last - buf_next->buf->pos);
+            do {                /* copy all bufs content into one continent buffer */
+                ngx_memcpy(orig_ctn.data + offset, buf_next->buf->pos, buf_next->buf->last - buf_next->buf->pos);
                 offset += buf_next->buf->last - buf_next->buf->pos;
                 buf_next = buf_next->next;
             } while(buf_next != NULL);
+            PRINT_NGXSTR("Content type key:", req->headers_in.content_type->value);
+            if (ngx_strcasecmp(req->headers_in.content_type->value.data,
+                                /*
+                                  What The Fuck! the content_type is of type `ngx_table_elt_t'
+                                  and the member `value' of content_type is of type `void *',
+                                  then how the hell here, it figures out the `value' is a ngx_str_t !
+
+                                  BTW: I can't even figure out how the `content_type' in ngx_http_headers_in_t
+                                  is initialized... bloody fuck!
+                                  all I know is `ngx_http_headers_in_t.content_type.value' is pointed to a member
+                                  of ngx_list_t `ngx_http_headers_in_t.headers'. and not clue to digg further.
+
+                                  Fuck fUck fuCk fucK!!!!! damn it nginx!
+                                 */
+                               (u_char*)"application/x-www-form-urlencoded") == 0){
+                /* if the content-type is urlencoded, then unescape content to a copy */
+                ngx_http_tidehunter_unescape_uri(req, &unescaped_ctn, &orig_ctn);
+            } else {
+                unescaped_ctn = orig_ctn;
+            }
             ngx_int_t weight=0;
             ngx_uint_t j;
             ngx_http_tidehunter_filter_rule_t *rule_elts = rule_a->elts;
             for (j=0; j < rule_a->nelts; j++) {
-                if (ngx_http_tidehunter_filter_match(&buf, &rule_elts[j])) {
+                if (ngx_http_tidehunter_filter_match(&unescaped_ctn, &rule_elts[j])) {
                     weight += rule_elts[j].weight;
                 }
             }

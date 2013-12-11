@@ -83,7 +83,7 @@ static int split_by_eq(ngx_str_t *i_qstr_s, ngx_uint_t start, ngx_uint_t end, qs
     return 0;
 }
 
-void ngx_http_tidehunter_unescape_args(ngx_http_request_t *req, ngx_str_t *dst, ngx_str_t *src){
+void ngx_http_tidehunter_unescape_uri(ngx_http_request_t *req, ngx_str_t *dst, ngx_str_t *src){
     /*
       unescape query string before I can do the filter.
     */
