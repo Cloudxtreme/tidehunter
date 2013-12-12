@@ -122,13 +122,14 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
 ngx_int_t ngx_http_tidehunter_filter_uri(ngx_http_request_t *req,
                                          ngx_array_t *rule_a){
     /*
-      a uri filter is NOT exactly a filter, it's more like a whitelist.
+      a uri filter is NOT exactly a filter, it's more like a whitelist (and a blacklist :) ).
       I create this filter so to make it possible that user can setup some
       uri whitelist at location level.
 
-      when writing rules, make the `weight' a negative number please,
-      a negative weight means I don't wanna be filtered no matter how illegal
-      this req is!
+      when writing rules, please NOTICE:
+        - a negative weight means I don't wanna be filtered no matter how illegal
+          this req is!
+        - a possitive weight means I wanna increase the chance that the req get blocked.
     */
     PRINT_NGXSTR("request uri:", req->uri);
     ngx_int_t weight=0;

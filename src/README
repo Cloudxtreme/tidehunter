@@ -21,3 +21,8 @@ NOTE:
   BUG description:
     inside the rewrite handler, the req->uri is actually point to `request line` member
     of the request_t. very strange. I cann't figure out why.
+
+TODO:
+
+* add a way to tell the weight average and stdvar.
+* filter rule of qstr & body are place in main_conf, while uri filter rule is in loc_conf

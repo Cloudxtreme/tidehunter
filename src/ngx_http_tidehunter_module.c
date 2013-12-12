@@ -167,8 +167,13 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_int_t weight=0;
     /* uri filter start */
     ngx_array_t *filter_rule_a = lcf->filter_rule_a[FT_URI];
-    if (filter_rule_a != NULL && ngx_http_tidehunter_filter_uri(req, filter_rule_a) < 0) {
-        /* the req doesn't wanna be filtered, so I'll skip the next two handler */
+    weight = ngx_http_tidehunter_filter_uri(req, filter_rule_a);
+    if (filter_rule_a != NULL && weight < 0) {
+        /*
+          if the req doesn't wanna be filtered, then the weight is negative.
+          and if weight>0, means the url is dangerous and you try to increase the
+          chance that req get blocked.
+        */
         req->phase_handler += 2;
         return (NGX_DECLINED);
     }
@@ -200,7 +205,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body(ngx_http_request_t *re
     /*
       IMPLEMENTATION NOTE: to make thing easy(or worse :)).
       the callback will continue the next phase handler(tidehunter_rewrite_handler_body_post),
-      when req body is ready.
+      when req body is ready. that is, the callback will skip this handler.
 
       by doing so, I can avoid using request ctx passing along to maintain some flags.
     */
