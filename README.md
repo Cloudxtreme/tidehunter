@@ -1,3 +1,11 @@
+## Highlights
+
+- automaticly adjust the filter's thredshold to your site
+- whitelist-orient is also available
+- super fast. writen in C, async processing request headers and request body.
+- extensible. new filter, new rule format parser, etc. all can be easily integrated into module.
+- SID. (aka. Still In Development)
+
 ## Intro
 
 TideHunter(aka. TH) borrow some ideas from [naxsi](https://github.com/nbs-system/naxsi).
@@ -54,8 +62,14 @@ by this method, TH can block abnormal request automaticly.
 ## The Filter
 
 Filter can take place at request's query-string, uri, body, cookie(not yet) etc.
-To load rule for query-string filter, apply this directive command in nginx.conf's http block:
+
+- To load rule for query-string filter, apply this directive command in nginx.conf's http block:
 `tidehunter\_loadrule\_qstr $your_rule_file_path`.
+- To load rule for body filter, apply this directive command in nginx.conf's http block:
+`tidehunter\_loadrule\_body $your_rule_file_path`.
+- To load rule for uri filter, apply this directive command in nginx.conf's _location_ block:
+`tidehunter\_loadrule\_uri $your_rule_file_path`.
+- more filter to be implemented...
 
 _NOTE_: the uri filter is quite different from other filters, the uri filter is designed to be a
 white/black list filter. that is,
@@ -65,3 +79,21 @@ rule for that uri, and set the weight to be `negative`.
 - when you want to increase the chance that specific uri get blocked, you write a uri filter
 rule for that uri, and set the weight to be a possitive weight, so it add up to the weight
 calculated by other filters.
+
+## Install
+
+this module require jansson lib to parse json:
+
+    apt-get install libjansson-dev
+
+or, compile it yourself.
+
+this module is tested on nginx-1.4.x. compile your nginx:
+
+    cd nginx-src; ./configure --prefix=/opt/nginx --add-module=PATH/tidehunter
+
+if you compile the jansson yourself, then you need to edit the nginx-src/objs/Makefile:
+
+- add "-I PATH\_to\_jansson/include" to ALL_INCS var
+- add "-L PATH\_to\_jansson/lib" to makefile target objs/nginx
+- before run nginx, update your env `export LD_LIBRARY_PATH="LD_LIBRARY_PATH:PATH\_to\_jansson/lib"`
