@@ -10,6 +10,7 @@ typedef enum {
     // FT_* is [F]ilter [T]ype
     FT_QSTR,
     FT_BODY,
+    FT_URI,
     FT_TOTAL
 } ngx_http_tidehunter_filter_type_e;
 

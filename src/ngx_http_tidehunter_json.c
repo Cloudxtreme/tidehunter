@@ -17,12 +17,31 @@ static int fill_filter_rule(json_t* rule_json_obj,
                             ngx_http_tidehunter_filter_rule_t *rule,
                             ngx_pool_t *pool);
 
-static int jsonstr2ngxstr(json_t *json, ngx_str_t *ngxstr, ngx_pool_t *pool);
+static int jsonstr2ngxstr(json_t *json,
+                          ngx_str_t *ngxstr,
+                          ngx_pool_t *pool);
 
+static ngx_int_t load_rule(ngx_str_t rulefile,
+                           ngx_array_t **filter_rule,
+                           ngx_pool_t *pool);
 
-int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                  ngx_http_tidehunter_filter_type_e filter_type,
-                                  ngx_pool_t *pool){
+ngx_int_t ngx_http_tidehunter_load_rule_to_mcf(ngx_http_tidehunter_main_conf_t *mcf,
+                                               ngx_http_tidehunter_filter_type_e filter_type,
+                                               ngx_pool_t *pool){
+    /* load rule to main conf */
+    return load_rule(mcf->rulefile[filter_type], &mcf->filter_rule_a[filter_type], pool);
+}
+
+ngx_int_t ngx_http_tidehunter_load_rule_to_lcf(ngx_http_tidehunter_loc_conf_t *lcf,
+                                               ngx_http_tidehunter_filter_type_e filter_type,
+                                               ngx_pool_t *pool){
+    /* load rule to loc conf */
+    return load_rule(lcf->rulefile[filter_type], &lcf->filter_rule_a[filter_type], pool);
+}
+
+static ngx_int_t load_rule(ngx_str_t rulefile,
+                           ngx_array_t **filter_rule,
+                           ngx_pool_t *pool){
     /*
       @return: 0 == success
 
@@ -36,13 +55,13 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
           "regex_str": "xxx",   string
         }, .. ]        object
     */
-    PRINT_NGXSTR("rule name:", mcf->rulefile[filter_type]);
+    PRINT_NGXSTR("rule name:", rulefile);
     json_t *json;
     json_error_t error;
     char * fname_str;
-    fname_str = malloc(mcf->rulefile[filter_type].len * sizeof(char) + 1);
-    memcpy(fname_str, mcf->rulefile[filter_type].data, mcf->rulefile[filter_type].len);
-    fname_str[mcf->rulefile[filter_type].len] = '\0';
+    fname_str = malloc(rulefile.len * sizeof(char) + 1);
+    memcpy(fname_str, rulefile.data, rulefile.len);
+    fname_str[rulefile.len] = '\0';
     json = json_load_file(fname_str, 0, &error);
     if( !json ){
         MESSAGE_S("fail to load json file:", fname_str);
@@ -68,7 +87,7 @@ int ngx_http_tidehunter_load_rule(ngx_http_tidehunter_main_conf_t *mcf,
         ngx_http_tidehunter_filter_rule_t *rule  = ngx_array_push(rule_a);
         fill_filter_rule(rule_json_obj, rule, pool);
     }
-    mcf->filter_rule_a[filter_type] = rule_a;
+    *filter_rule = rule_a;
     PRINT_INFO("rule loaded");
     return 0;
 }
@@ -104,7 +123,7 @@ static int fill_filter_rule(json_t* rule_json_obj,
             JSON_DBG_STR(rule_json_obj, "id");
             return -1;
         }
-        rc->options = NGX_REGEX_CASELESS;
+        rc->options = NGX_REGEX_CASELESS; /* TODO:make it configurable? */
         rc->pool = pool;
         rc->err.len = NGX_MAX_CONF_ERRSTR;
         rc->err.data = errstr; /* the errstr is on the stack */

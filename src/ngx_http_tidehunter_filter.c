@@ -61,14 +61,13 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
         - currently big body(in tempfile) is ignored.
     */
     ngx_http_request_body_t *rb = req->request_body;
-    // test whether rb is in BUFS, BUF, TEMP_FILE
     if (req->headers_in.content_length_n <=0) {
         return 0;
     }
     if (!rb->temp_file) {
-        // request body is in the buf OR bufs chain
+        /* request body is in the buf OR bufs chain */
         if (rb->bufs != NULL) {
-            // request body in buf
+            /* request body in buf */
             ngx_str_t orig_ctn, unescaped_ctn;
             orig_ctn.len = req->headers_in.content_length_n; /* WHY: content_length_n is of type `off_t' */
             orig_ctn.data = ngx_palloc(req->pool, orig_ctn.len); /* alloc, but not clean needed. */
@@ -80,7 +79,6 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
                 offset += buf_next->buf->last - buf_next->buf->pos;
                 buf_next = buf_next->next;
             } while(buf_next != NULL);
-            PRINT_NGXSTR("Content type key:", req->headers_in.content_type->value);
             if (ngx_strcasecmp(req->headers_in.content_type->value.data,
                                 /*
                                   What The Fuck! the content_type is of type `ngx_table_elt_t'
@@ -110,7 +108,7 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
             }
             return weight;
         } else {
-            PRINT_INFO("where is body?");
+            MESSAGE("where is body?");
             return 0;
         }
     } else {
@@ -121,10 +119,35 @@ ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
 }
 
 
+ngx_int_t ngx_http_tidehunter_filter_uri(ngx_http_request_t *req,
+                                         ngx_array_t *rule_a){
+    /*
+      a uri filter is NOT exactly a filter, it's more like a whitelist.
+      I create this filter so to make it possible that user can setup some
+      uri whitelist at location level.
+
+      when writing rules, make the `weight' a negative number please,
+      a negative weight means I don't wanna be filtered no matter how illegal
+      this req is!
+    */
+    PRINT_NGXSTR("request uri:", req->uri);
+    ngx_int_t weight=0;
+    ngx_uint_t j;
+    ngx_http_tidehunter_filter_rule_t *rule_elts = rule_a->elts;
+    for (j=0; j < rule_a->nelts; j++) {
+        if (ngx_http_tidehunter_filter_match(&req->uri, &rule_elts[j])) {
+            weight += rule_elts[j].weight;
+            PRINT_INT("uri weight:", weight);
+        }
+    }
+    return weight;
+}
+
+
 static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
                                             ngx_http_tidehunter_filter_rule_t *rule){
     /*
-      the basic function for filter.
+      the basic function for filter: apply the rule to target ngxstr
       @param in: i_target_s: ngx_str_t to be match
       @param in: opt       : contains match pattern
       @return: `0' == NOT match. `1' == match
@@ -170,19 +193,59 @@ static int ngx_http_tidehunter_filter_match(ngx_str_t *i_target_s,
 
 
 
-ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                               ngx_http_tidehunter_filter_type_e filter_type,
-                                               ngx_pool_t *pool){
+char *ngx_http_tidehunter_filter_qstr_init(ngx_conf_t *cf,
+                                           ngx_command_t *cmd,
+                                           void *conf){
     /*
       @return: 0 == success
 
-      load_rule implementation is independent, json, yaml
+      load_rule_to_xxx implementation is independent, json, yaml
       whatever you want. a json rule loader is currently
       implemented by me.
     */
-    if (mcf->rulefile[filter_type].len == 0){
-        /* no loadrule directive for this filter_type */
-        return -1;
+    ngx_http_tidehunter_main_conf_t *mcf = conf;
+    ngx_str_t *value = cf->args->elts;
+    mcf->rulefile[FT_QSTR] = value[1];
+    if (ngx_http_tidehunter_load_rule_to_mcf(mcf , FT_QSTR, cf->pool) != 0) {
+        return NGX_CONF_ERROR;
     }
-    return ngx_http_tidehunter_load_rule(mcf , filter_type, pool);
+    return NGX_OK;
+}
+
+char *ngx_http_tidehunter_filter_body_init(ngx_conf_t *cf,
+                                           ngx_command_t *cmd,
+                                           void *conf){
+    /*
+      @return: 0 == success
+
+      load_rule_to_xxx implementation is independent, json, yaml
+      whatever you want. a json rule loader is currently
+      implemented by me.
+    */
+    ngx_http_tidehunter_main_conf_t *mcf = conf;
+    ngx_str_t *value = cf->args->elts;
+    mcf->rulefile[FT_BODY] = value[1];
+    if (ngx_http_tidehunter_load_rule_to_mcf(mcf , FT_BODY, cf->pool) != 0) {
+        return NGX_CONF_ERROR;
+    }
+    return NGX_OK;
+}
+
+char *ngx_http_tidehunter_filter_uri_init(ngx_conf_t *cf,
+                                          ngx_command_t *cmd,
+                                          void *conf){
+    /*
+      @return: 0 == success
+
+      load_rule_to_xxx implementation is independent, json, yaml
+      whatever you want. a json rule loader is currently
+      implemented by me.
+    */
+    ngx_http_tidehunter_loc_conf_t *lcf = conf;
+    ngx_str_t *value = cf->args->elts;
+    lcf->rulefile[FT_URI] = value[1];
+    if (ngx_http_tidehunter_load_rule_to_lcf(lcf , FT_URI, cf->pool) != 0) {
+        return NGX_CONF_ERROR;
+    }
+    return NGX_OK;
 }

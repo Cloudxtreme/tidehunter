@@ -32,17 +32,25 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
     {
         ngx_string("tidehunter_loadrule_qstr"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_str_slot,
+        ngx_http_tidehunter_filter_body_init,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t) * FT_QSTR,
+        0,
         NULL
     },
     {
         ngx_string("tidehunter_loadrule_body"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_str_slot,
+        ngx_http_tidehunter_filter_qstr_init,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_main_conf_t, rulefile) + sizeof(ngx_str_t) * FT_BODY,
+        0,
+        NULL
+    },
+    {
+        ngx_string("tidehunter_loadrule_uri"), /* uri rule ,unlike others, is located in loc conf */
+        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_tidehunter_filter_uri_init,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        0,
         NULL
     },
     {
@@ -50,7 +58,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
         NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_http_tidehunter_smart_init,
         NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_tidehunter_loc_conf_t, smart),
+        0,
         NULL
     },
     {
@@ -91,17 +99,14 @@ static ngx_int_t ngx_http_tidehunter_init(ngx_conf_t *cf){
         return NGX_ERROR;
     }
 
-    /* initialize the qstr filter rule */
-    ngx_http_tidehunter_filter_init_rule(mcf, FT_QSTR, cf->pool);
-    ngx_http_tidehunter_filter_init_rule(mcf, FT_BODY, cf->pool);
-
 
     /*************************************************************************************/
     /* VERY IMPORTANT: the handlers in the same module are called in reversed order      */
     /* compared to the order in which handlers are registered to REWRITE_PHASE.handlers. */
+    /* please refer to nginx source code `ngx_http.c -> ngx_http_init_phase_handlers'    */
     /*                                                                                   */
-    /* so make sure the rewrite_handler_body[2] is registered right below the               */
-    /* rewirte_handler_body_post[3] handler register.                                       */
+    /* so make sure the rewrite_handler_body<2> is registered right below the            */
+    /* rewirte_handler_body_post<3> handler register.                                    */
     /*************************************************************************************/
 
 
@@ -160,12 +165,21 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
         return (NGX_DECLINED);
     }
     ngx_int_t weight=0;
-    ngx_array_t *filter_rule_a = mcf->filter_rule_a[FT_QSTR];
+    /* uri filter start */
+    ngx_array_t *filter_rule_a = lcf->filter_rule_a[FT_URI];
+    if (filter_rule_a != NULL && ngx_http_tidehunter_filter_uri(req, filter_rule_a) < 0) {
+        /* the req doesn't wanna be filtered, so I'll skip the next two handler */
+        req->phase_handler += 2;
+        return (NGX_DECLINED);
+    }
+
+    /* query string filter start */
+    filter_rule_a = mcf->filter_rule_a[FT_QSTR];
     if (filter_rule_a != NULL) {
         weight += ngx_http_tidehunter_filter_qstr(req, filter_rule_a);
     }
     if(weight >= 0){
-        PRINT_INT("MATCH WEIGHT:", (int)weight);
+        PRINT_INT("MATCH WEIGHT:", weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
         if (smart_rv == SMART_ABNORMAL){
@@ -233,7 +247,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler_body_post(ngx_http_request_
         }
     }
     if(weight >= 0){
-        PRINT_INT("MATCH WEIGHT:", (int)weight);
+        PRINT_INT("MATCH WEIGHT:", weight);
         ngx_int_t smart_rv;
         smart_rv = ngx_http_tidehunter_smart_test(req, weight);
         if (smart_rv == SMART_ABNORMAL){

@@ -50,8 +50,8 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
     }
     PRINT_FLOAT("thredshold:", thredshold);
     PRINT_FLOAT("stdvar:", stdvar);
-    PRINT_INT("aver:", (int)lcf->smart->average);
-    PRINT_INT("tail weight:", (int)lcf->smart->tail_weight);
+    PRINT_INT("aver:", lcf->smart->average);
+    PRINT_INT("tail weight:", lcf->smart->tail_weight);
     if (thredshold >= weight) {
         /* it's a normal request */
         return SMART_NORMAL;
@@ -70,7 +70,7 @@ char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *c
      */
     ngx_str_t *value = cf->args->elts;
     ngx_int_t thredshold = ngx_atoi(value[1].data, value[1].len); /* the initial threadshold */
-    PRINT_INT("init thredshold:", (int)thredshold);
+    PRINT_INT("init thredshold:", thredshold);
     ngx_http_tidehunter_loc_conf_t *lcf = conf;
     lcf->smart = ngx_pcalloc(cf->pool, sizeof(ngx_http_tidehunter_smart_t));
     if (lcf->smart == NULL) {

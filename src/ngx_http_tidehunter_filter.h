@@ -21,6 +21,18 @@ ngx_int_t ngx_http_tidehunter_filter_qstr(ngx_http_request_t *req,
 ngx_int_t ngx_http_tidehunter_filter_body(ngx_http_request_t *req,
                                           ngx_array_t *opt);
 
-ngx_int_t ngx_http_tidehunter_filter_init_rule(ngx_http_tidehunter_main_conf_t *mcf,
-                                               ngx_http_tidehunter_filter_type_e filter_type,
-                                               ngx_pool_t *pool);
+ngx_int_t ngx_http_tidehunter_filter_uri(ngx_http_request_t *req,
+                                         ngx_array_t *rule_a);
+
+
+char *ngx_http_tidehunter_filter_qstr_init(ngx_conf_t *cf,
+                                          ngx_command_t *cmd,
+                                          void *conf);
+
+char *ngx_http_tidehunter_filter_body_init(ngx_conf_t *cf,
+                                          ngx_command_t *cmd,
+                                          void *conf);
+
+char *ngx_http_tidehunter_filter_uri_init(ngx_conf_t *cf,
+                                          ngx_command_t *cmd,
+                                          void *conf);
