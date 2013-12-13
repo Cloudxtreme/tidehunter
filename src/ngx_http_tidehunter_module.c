@@ -167,15 +167,17 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     ngx_int_t weight=0;
     /* uri filter start */
     ngx_array_t *filter_rule_a = lcf->filter_rule_a[FT_URI];
-    weight = ngx_http_tidehunter_filter_uri(req, filter_rule_a);
-    if (filter_rule_a != NULL && weight < 0) {
+    if (filter_rule_a != NULL) {
         /*
           if the req doesn't wanna be filtered, then the weight is negative.
           and if weight>0, means the url is dangerous and you try to increase the
           chance that req get blocked.
         */
-        req->phase_handler += 2;
-        return (NGX_DECLINED);
+        weight = ngx_http_tidehunter_filter_uri(req, filter_rule_a);
+        if (weight < 0) {
+            req->phase_handler += 2;
+            return (NGX_DECLINED);
+        }
     }
 
     /* query string filter start */
