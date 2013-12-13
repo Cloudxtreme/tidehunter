@@ -20,8 +20,11 @@ class SqlHandler(tornado.web.RequestHandler):
     def get(self):
         qid = self.get_argument("id");
         rows = database.query(qid);
+        if len(rows) == 0:
+            self.write("id error")
+            return
         info = rows[0][1]
-        self.render("sql.html", qid=qid, info=info)
+        self.render("sql.html", info=info)
 
 if __name__ == "__main__":
     settings = {

@@ -6,5 +6,8 @@ cur.execute('create table test (id varchar(5), info varchar(20));')
 cur.execute('insert into test values ("123", "hello world");')
 
 def query(qid):
-    cur.execute("select * from test where id=" + qid);  #this is the bad case.
+    try:
+        cur.execute("select * from test where id=" + qid);  #this is the bad case.
+    except:
+        return []
     return cur.fetchall()
