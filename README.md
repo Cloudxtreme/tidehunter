@@ -9,7 +9,7 @@
 ## Intro
 
 TideHunter(aka. TH) borrow some ideas from [naxsi](https://github.com/nbs-system/naxsi).
-Basicly, TH try to filter on all the requests at nginx `HTTP\_REWRITE\_PAHSE`.
+Basicly, TH try to filter on all the requests at nginx `HTTP_REWRITE_PAHSE`.
 
 Let's look at a basic nginx.conf for TH first:
 
@@ -26,7 +26,7 @@ Let's look at a basic nginx.conf for TH first:
         }
     }
 
-The filters' rules is loaded by the nginx directive `tidehunter\_loadrule\_xxxx`.
+The filters' rules is loaded by the nginx directive `tidehunter_loadrule_xxxx`.
 for example, I can load the rule for query string filter like thie,
 
     tidehunter_loadrule_qstr /opt/nginx/rules/qstr.json

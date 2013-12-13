@@ -5,6 +5,8 @@ import os
 import tornado.web
 import tornado.ioloop
 
+import database
+
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("index.html")
@@ -17,12 +19,15 @@ class XssHandler(tornado.web.RequestHandler):
 class SqlHandler(tornado.web.RequestHandler):
     def get(self):
         qid = self.get_argument("id");
-        self.render("sql.html", qid=qid)
+        rows = database.query(qid);
+        info = rows[0][1]
+        self.render("sql.html", qid=qid, info=info)
 
 if __name__ == "__main__":
     settings = {
-            "autoescape" : None,
+            "autoescape" : None,    #so to make xss available
             "template_path" : os.path.join(os.path.dirname(__file__), "html"),
+            "debug" : True,
             }
     application = tornado.web.Application([
         (r"/", MainHandler),
