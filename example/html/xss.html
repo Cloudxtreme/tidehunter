@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Hi, there</h2>
+<p>the qstr you pass:{{ qstr }}</p>
+<form action=/xss method=GET>
+    input qstr:<input type="text" name="qstr" />
+    <input type="submit" value="search" />
+</form>
+{% end %}
