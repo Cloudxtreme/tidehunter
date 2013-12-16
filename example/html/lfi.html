@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Hi, Directory Traversal</h2>
+
+<form action="/lfi" method="GET">
+    your file path:<input type="text" name="filename" />
+    <input type="submit" value="Submit" />
+</form>
+{% end %}

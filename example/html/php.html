@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Hi, PHP RFI</h2>
+
+<h4>POST method:</h4>
+<form action="/php" method="POST">
+    your php file url:<input type="text" name="phpurl" />
+    <input type="submit" value="Submit" />
+</form>
+
+<h4>GET method:</h4>
+<form action="/php" method="POST">
+    your php file url:<input type="text" name="phpurl" />
+    <input type="submit" value="Submit" />
+</form>
+{% end %}
