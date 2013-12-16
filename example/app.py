@@ -11,7 +11,6 @@
 #   - require php for PHP file include
 
 import os
-import urllib2
 import subprocess
 from subprocess import PIPE
 import tornado.web
