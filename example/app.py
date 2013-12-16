@@ -48,10 +48,10 @@ class LfiHandler(tornado.web.RequestHandler):
         except:
             self.render("lfi.html")
             return
-        if not os.path.isdir(filename):
+        if os.path.exists(filename) and not os.path.isdir(filename):
             self.write(open(filename, 'r').read())     #give you all the secrets
         else:
-            raise tornado.web.HTTPError(404)
+            raise tornado.web.HTTPError(400)
 
 class PhpHandler(tornado.web.RequestHandler):
     # Remote File Inclusion, (php)
