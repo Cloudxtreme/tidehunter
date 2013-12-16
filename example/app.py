@@ -53,6 +53,9 @@ class LfiHandler(tornado.web.RequestHandler):
         else:
             raise tornado.web.HTTPError(400)
 
+    def post(self):
+        self.get()
+
 class PhpHandler(tornado.web.RequestHandler):
     # Remote File Inclusion, (php)
     # FIXME: NOT work, php under cli is diff from php behind cgi
