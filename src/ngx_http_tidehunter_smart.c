@@ -81,6 +81,7 @@ char *ngx_http_tidehunter_smart_init(ngx_conf_t *cf, ngx_command_t *cmd, void *c
         lcf->smart->hist_weight[i] = thredshold;
     }
     lcf->smart->average = thredshold;
+    lcf->smart->average_pow2 = POW2(thredshold);
     lcf->smart->stdvar = 0;
     lcf->smart->tail_pos = 0;
     lcf->smart->tail_weight = thredshold;
@@ -95,13 +96,15 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight){
       a tail_weight in hist_weight is removed, the new weight is put in there,
       and tail_pos move one step forward.
 
-      NOTE: as it's a approx approach to calculating stdvar.
+      stdvar = E(x^2) - E(x)*E(x) = aver_pow2 - aver*aver
     */
-    float stdvar=smart->stdvar;
-    float aver=smart->average;
+    float stdvar = smart->stdvar;
+    float aver = smart->average;
+    float aver_pow2 = smart->average_pow2;
     aver = aver - ((float)smart->tail_weight / RING_SIZE) + ((float)weight / RING_SIZE); /* this is SMA */
-    stdvar = stdvar + (POW2(weight - aver) -
-                       POW2(smart->tail_weight - smart->average)) / RING_SIZE;           /* recalculate stdvar roughly, not precise */
+    aver_pow2 = aver_pow2 - (POW2((float)smart->tail_weight) / RING_SIZE)\
+                + (POW2((float)weight) / RING_SIZE); /* this is SMA */
+    stdvar = aver_pow2 - POW2(aver);
     smart->stdvar = stdvar;
     smart->average = aver;
     smart->hist_weight[smart->tail_pos] = weight;

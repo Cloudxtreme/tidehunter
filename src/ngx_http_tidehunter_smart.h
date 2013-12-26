@@ -9,6 +9,7 @@ typedef struct{
     ngx_int_t tail_weight;      /* == hist_weight[tail_pos] */
     float     stdvar;
     float     average;
+    float     average_pow2;
 } ngx_http_tidehunter_smart_t;
 
 #define SMART_NOTINIT  -2
