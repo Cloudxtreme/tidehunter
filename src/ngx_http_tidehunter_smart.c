@@ -50,7 +50,8 @@ ngx_int_t ngx_http_tidehunter_smart_test(ngx_http_request_t *req, ngx_int_t weig
     }
     PRINT_FLOAT("thredshold:", thredshold);
     PRINT_FLOAT("stdvar:", stdvar);
-    PRINT_INT("aver:", lcf->smart->average);
+    PRINT_FLOAT("aver:", lcf->smart->average);
+    PRINT_FLOAT("aver pow2:", lcf->smart->average_pow2);
     PRINT_INT("tail weight:", lcf->smart->tail_weight);
     if (thredshold >= weight) {
         /* it's a normal request */
@@ -107,6 +108,7 @@ static float get_stdvar(ngx_http_tidehunter_smart_t *smart, ngx_int_t weight){
     stdvar = aver_pow2 - POW2(aver);
     smart->stdvar = stdvar;
     smart->average = aver;
+    smart->average_pow2 = aver_pow2;
     smart->hist_weight[smart->tail_pos] = weight;
     smart->tail_pos = (smart->tail_pos + 1) % RING_SIZE;                                 /* this is how ring ptr move */
     smart->tail_weight = smart->hist_weight[smart->tail_pos];

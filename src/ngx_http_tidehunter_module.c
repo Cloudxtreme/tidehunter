@@ -32,7 +32,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
     {
         ngx_string("tidehunter_loadrule_qstr"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_http_tidehunter_filter_body_init,
+        ngx_http_tidehunter_filter_qstr_init,
         NGX_HTTP_MAIN_CONF_OFFSET,
         0,
         NULL
@@ -40,7 +40,7 @@ static ngx_command_t ngx_http_tidehunter_commands[] = {
     {
         ngx_string("tidehunter_loadrule_body"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_http_tidehunter_filter_qstr_init,
+        ngx_http_tidehunter_filter_body_init,
         NGX_HTTP_MAIN_CONF_OFFSET,
         0,
         NULL
@@ -173,6 +173,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
           and if weight>0, means the url is dangerous and you try to increase the
           chance that req get blocked.
         */
+        PRINT_INFO("enter uri filter");
         weight = ngx_http_tidehunter_filter_uri(req, filter_rule_a);
         if (weight < 0) {
             req->phase_handler += 2;
@@ -183,6 +184,7 @@ static ngx_int_t ngx_http_tidehunter_rewrite_handler(ngx_http_request_t *req){
     /* query string filter start */
     filter_rule_a = mcf->filter_rule_a[FT_QSTR];
     if (filter_rule_a != NULL) {
+        PRINT_INFO("enter qstr filter");
         weight += ngx_http_tidehunter_filter_qstr(req, filter_rule_a);
     }
     if(weight >= 0){
